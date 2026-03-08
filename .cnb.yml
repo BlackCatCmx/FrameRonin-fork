@@ -20,4 +20,4 @@ main:
         - name: 构建前端
           script: cd frontend && npm run build
         - name: 部署到 EdgeOne Pages
-          script: npx edgeone pages deploy frontend/dist -n RoninPixeltools -t $EDGEONE_API_TOKEN
+          script: npx edgeone pages deploy frontend/dist -n ronin-pixeltools -t $EDGEONE_API_TOKEN
