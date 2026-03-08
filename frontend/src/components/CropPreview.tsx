@@ -53,13 +53,6 @@ export default function CropPreview({
     img.src = imageUrl
   }, [imageUrl, onImageSize])
 
-  const getScale = useCallback(() => {
-    if (!imgSize || !containerRef.current) return 1
-    const rc = containerRef.current.getBoundingClientRect()
-    const scale = Math.min(rc.width / imgSize.w, rc.height / imgSize.h)
-    return scale
-  }, [imgSize])
-
   const getDisplayRect = useCallback(() => {
     if (!imgSize) return null
     // 按图片实际分辨率：小图 1:1 显示，大图按比例缩小至 PREVIEW_MAX 内
@@ -198,13 +191,6 @@ export default function CropPreview({
     cursor: 'pointer',
     zIndex: 10,
     boxShadow: '0 0 0 1px rgba(255,255,255,0.8)',
-  }
-  const edgeStyle: React.CSSProperties = {
-    ...handleStyle,
-    width: 6,
-    height: 6,
-    borderRadius: '50%',
-    cursor: 'ns-resize',
   }
   const cornerSize = Math.min(HANDLE_SIZE, Math.max(6, boxW / 4), Math.max(6, boxH / 4))
 

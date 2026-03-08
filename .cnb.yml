@@ -1,0 +1,20 @@
+# 云原生构建配置 - pixelwork 前端
+# 文档: https://docs.cnb.cool/build/quick-start.html
+
+main:
+  push:
+    - name: "pixelwork 前端构建"
+      docker:
+        image: node:20
+      stages:
+        - name: 安装依赖
+          script: cd frontend && npm ci
+        - name: 构建前端
+          script: cd frontend && npm run build
+        - name: 输出构建信息
+          script: |
+            echo "构建完成"
+            echo "用户: ${CNB_BUILD_USER}"
+            echo "分支: ${CNB_BRANCH}"
+            echo "事件: ${CNB_EVENT}"
+            ls -la frontend/dist/
