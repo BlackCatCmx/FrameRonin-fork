@@ -407,8 +407,8 @@ export default function SpriteSheetAdjust() {
                 className="sprite-adjust-grid sprite-adjust-grid-with-headers"
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: `22px repeat(${cols}, 1fr)`,
-                  gridTemplateRows: `22px repeat(${rows}, 1fr)`,
+                  gridTemplateColumns: `22px repeat(${cols}, minmax(56px, 1fr))`,
+                  gridTemplateRows: `22px repeat(${rows}, minmax(56px, 1fr))`,
                   gap: 8,
                   overflow: 'auto',
                   alignItems: 'stretch',

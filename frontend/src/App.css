@@ -522,7 +522,7 @@
 .sprite-adjust-module .sprite-adjust-grid {
   width: 100%;
   max-width: 1060px;
-  max-height: 420px;
+  max-height: 560px;
   min-height: 120px;
 }
 
@@ -540,8 +540,8 @@
 
 /* 仅对帧格子应用最小尺寸，min-height:0 防止溢出到下一行 */
 .sprite-adjust-module .sprite-adjust-grid > div.sprite-adjust-cell {
-  min-width: 48px;
-  min-height: 0;
+  min-width: 56px;
+  min-height: 56px;
   box-sizing: border-box;
 }
 

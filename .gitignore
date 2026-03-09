@@ -35,6 +35,9 @@ Thumbs.db
 *.log
 logs/
 
+# 临时提取的 base64（已嵌入代码）
+frontend/scripts/bg*.txt
+
 # wrangler files
 .wrangler
 .dev.vars*

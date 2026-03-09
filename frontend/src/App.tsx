@@ -17,6 +17,7 @@ import ImageResizeStroke from './components/ImageResizeStroke'
 import ModeSelector, { type AppMode } from './components/ModeSelector'
 import SpriteSheetTool from './components/SpriteSheetTool'
 import SpriteSheetAdjust from './components/SpriteSheetAdjust'
+import ImageGeminiWatermark from './components/ImageGeminiWatermark'
 
 const ImageMatte = lazy(() => import('./components/ImageMatte'))
 import ParamsStep from './components/ParamsStep'
@@ -214,6 +215,19 @@ function App() {
                 </Button>
               </div>
               <SpriteSheetAdjust />
+            </Card>
+          ) : mode === 'geminiwatermark' ? (
+            <Card>
+              <div style={{ marginBottom: 16 }}>
+                <Button
+                  type="text"
+                  icon={<ArrowLeftOutlined />}
+                  onClick={() => setMode(null)}
+                >
+                  {t('backToHome')}
+                </Button>
+              </div>
+              <ImageGeminiWatermark />
             </Card>
           ) : (
             <>

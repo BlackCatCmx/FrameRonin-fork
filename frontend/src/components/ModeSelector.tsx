@@ -1,5 +1,5 @@
 import { Card, Row, Col, Typography } from 'antd'
-import { ArrowsAltOutlined, BlockOutlined, FileImageOutlined, PictureOutlined, VideoCameraOutlined, ThunderboltOutlined, BorderOuterOutlined, ScissorOutlined } from '@ant-design/icons'
+import { ArrowsAltOutlined, BlockOutlined, FileImageOutlined, PictureOutlined, VideoCameraOutlined, ThunderboltOutlined, BorderOuterOutlined, ScissorOutlined, SafetyOutlined } from '@ant-design/icons'
 import { useAuth } from '../auth/context'
 import { useLanguage } from '../i18n/context'
 
@@ -11,7 +11,7 @@ const GEM_CHAR_V23OT_URL = 'https://gemini.google.com/gem/194dFaRUI2l4kFnLEVzmwI
 const GEM_SCENE_URL = 'https://gemini.google.com/gem/1a83JP082OIliUQZN5SsBguMOrYm4g6P2?usp=sharing'
 const GEM_ILLUST_URL = 'https://gemini.google.com/gem/1IUuJXgHTTbMEgv5D_G0HXSHXxYdcfTZg?usp=sharing'
 
-export type AppMode = 'video' | 'image' | 'gif' | 'spritesheet' | 'spriteadjust' | 'pixelate' | 'expandshrink' | 'matte' | null
+export type AppMode = 'video' | 'image' | 'gif' | 'spritesheet' | 'spriteadjust' | 'pixelate' | 'expandshrink' | 'matte' | 'geminiwatermark' | null
 
 interface Props {
   onSelect: (mode: AppMode) => void
@@ -303,6 +303,28 @@ export default function ModeSelector({ onSelect }: Props) {
           </div>
           <Text type="secondary" style={{ display: 'block', marginTop: 4, fontSize: 11, lineHeight: 1.35 }}>
             {t('modulePixelateDesc')}
+          </Text>
+        </Card>
+      </Col>
+      <Col xs={24} sm={{ flex: '1 1 0' }} style={{ display: 'flex', minWidth: 0 }}>
+        <Card
+          hoverable
+          onClick={() => onSelect('geminiwatermark')}
+          styles={{ body: { padding: '12px 16px' } }}
+          style={{
+            textAlign: 'center',
+            cursor: 'pointer',
+            borderColor: '#9a8b78',
+            flex: 1,
+            minHeight: 140,
+          }}
+        >
+          <SafetyOutlined style={{ fontSize: 32, color: '#b55233', marginBottom: 8 }} />
+          <div style={{ lineHeight: 1.4 }}>
+            <Text strong style={{ fontSize: 13 }}>{t('moduleGeminiWatermark')}</Text>
+          </div>
+          <Text type="secondary" style={{ display: 'block', marginTop: 4, fontSize: 11, lineHeight: 1.35 }}>
+            {t('moduleGeminiWatermarkDesc')}
           </Text>
         </Card>
       </Col>
