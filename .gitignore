@@ -12,6 +12,15 @@ venv
 # Node (root level if any)
 node_modules
 
+# Build outputs
+dist
+frontend/dist
+*.tsbuildinfo
+
+# User uploads / runtime data (禁止提交到任何远程)
+backend/uploads/*
+!backend/uploads/.gitkeep
+
 # IDE
 .vscode
 .idea
@@ -21,6 +30,10 @@ node_modules
 # OS
 .DS_Store
 Thumbs.db
+
+# Logs
+*.log
+logs/
 
 # wrangler files
 .wrangler
