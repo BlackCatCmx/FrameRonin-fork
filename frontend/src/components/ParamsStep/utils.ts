@@ -77,6 +77,39 @@ export async function resizeImageToBlob(
   })
 }
 
+/** 图片按3行切分，行高=h/3。将第3行下移1行高度，第2行复制到第3行位置并水平翻转。输出高度 = h + rowHeight */
+export async function extendImageBottom(blob: Blob, _bottomPx: number): Promise<Blob> {
+  const img = await (typeof createImageBitmap === 'function'
+    ? createImageBitmap(blob)
+    : new Promise<HTMLImageElement>((resolve, reject) => {
+        const im = new Image()
+        const url = URL.createObjectURL(blob)
+        im.onload = () => { URL.revokeObjectURL(url); resolve(im) }
+        im.onerror = () => { URL.revokeObjectURL(url); reject(new Error('ERR_IMAGE_LOAD')) }
+        im.src = url
+      }))
+  const w = img.width
+  const h = img.height
+  const rowH = Math.floor(h / 3)
+  if (rowH <= 0) return blob
+  const canvas = document.createElement('canvas')
+  canvas.width = w
+  canvas.height = h + rowH
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return blob
+  ctx.drawImage(img, 0, 0, w, rowH, 0, 0, w, rowH)
+  ctx.drawImage(img, 0, rowH, w, rowH, 0, rowH, w, rowH)
+  ctx.save()
+  ctx.translate(w, 2 * rowH)
+  ctx.scale(-1, 1)
+  ctx.drawImage(img, 0, rowH, w, rowH, 0, 0, w, rowH)
+  ctx.restore()
+  ctx.drawImage(img, 0, 2 * rowH, w, rowH, 0, 3 * rowH, w, rowH)
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('ERR_TOBLOB'))), 'image/png', 0.95)
+  })
+}
+
 export function formatTime(sec: number): string {
   const m = Math.floor(sec / 60)
   const s = Math.floor(sec % 60)

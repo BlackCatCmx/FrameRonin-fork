@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Button, InputNumber, message, Slider, Space, Tabs, Typography, Upload } from 'antd'
-import { CaretLeftOutlined, CaretRightOutlined, DownloadOutlined, FileImageOutlined, PictureOutlined, MergeCellsOutlined } from '@ant-design/icons'
+import { Button, InputNumber, message, Radio, Slider, Space, Tabs, Tooltip, Typography, Upload } from 'antd'
+import { CaretLeftOutlined, CaretRightOutlined, DeleteOutlined, DownloadOutlined, DragOutlined, FileImageOutlined, LayoutOutlined, PictureOutlined, MergeCellsOutlined } from '@ant-design/icons'
 import type { UploadFile } from 'antd'
 import { parseGIF, decompressFrames } from 'gifuct-js'
 // @ts-expect-error gifenc has no types
@@ -63,7 +63,7 @@ function compositeFrame(
 
 export default function GifFrameConverter() {
   const { t } = useLanguage()
-  const [activeTab, setActiveTab] = useState<'gif2frames' | 'frames2gif' | 'images2single'>('gif2frames')
+  const [activeTab, setActiveTab] = useState<'gif2frames' | 'frames2gif' | 'images2single' | 'simpleStitch'>('gif2frames')
   const [gifFile, setGifFile] = useState<File | null>(null)
   const [gifPreviewUrl, setGifPreviewUrl] = useState<string | null>(null)
   const [frameFiles, setFrameFiles] = useState<File[]>([])
@@ -76,7 +76,13 @@ export default function GifFrameConverter() {
 
   const [combineFiles, setCombineFiles] = useState<File[]>([])
   const [combineInputUrls, setCombineInputUrls] = useState<string[]>([])
+  const [dragReorderIdx, setDragReorderIdx] = useState<number | null>(null)
   const [combineCols, setCombineCols] = useState(4)
+  const [imagesToSingleInputMode, setImagesToSingleInputMode] = useState<'multi' | 'split'>('multi')
+  const [splitFile, setSplitFile] = useState<File | null>(null)
+  const [splitFileUrl, setSplitFileUrl] = useState<string | null>(null)
+  const [splitRows, setSplitRows] = useState(2)
+  const [splitCols, setSplitCols] = useState(2)
   const [combinedUrl, setCombinedUrl] = useState<string | null>(null)
   const [cropTop, setCropTop] = useState(0)
   const [cropBottom, setCropBottom] = useState(0)
@@ -84,6 +90,11 @@ export default function GifFrameConverter() {
   const [cropRight, setCropRight] = useState(0)
   const [cropPreviewIndex, setCropPreviewIndex] = useState(0)
   const [firstImageSize, setFirstImageSize] = useState<{ w: number; h: number } | null>(null)
+
+  const [stitchFiles, setStitchFiles] = useState<File[]>([])
+  const [stitchInputUrls, setStitchInputUrls] = useState<string[]>([])
+  const [stitchDirection, setStitchDirection] = useState<'vertical' | 'horizontal'>('vertical')
+  const [stitchResultUrl, setStitchResultUrl] = useState<string | null>(null)
 
   const revokeExtractedPreviews = () => {
     setExtractedFrameUrls((urls) => {
@@ -123,6 +134,69 @@ export default function GifFrameConverter() {
       setCropPreviewIndex((i) => Math.min(i, combineFiles.length - 1))
     }
   }, [combineFiles.length])
+
+  useEffect(() => {
+    if (splitFile) {
+      const url = URL.createObjectURL(splitFile)
+      setSplitFileUrl(url)
+      return () => URL.revokeObjectURL(url)
+    }
+    setSplitFileUrl(null)
+  }, [splitFile])
+
+  useEffect(() => {
+    const urls = stitchFiles.map((f) => URL.createObjectURL(f))
+    setStitchInputUrls(urls)
+    return () => urls.forEach(URL.revokeObjectURL)
+  }, [stitchFiles])
+
+  const runSplitSingleImage = async () => {
+    if (!splitFile) return
+    setLoading(true)
+    setCombinedUrl((old) => {
+      if (old) URL.revokeObjectURL(old)
+      return null
+    })
+    try {
+      const url = URL.createObjectURL(splitFile)
+      const img = await new Promise<HTMLImageElement>((res, rej) => {
+        const i = new Image()
+        i.onload = () => res(i)
+        i.onerror = () => rej(new Error('load'))
+        i.src = url
+      })
+      URL.revokeObjectURL(url)
+      const w = img.naturalWidth
+      const h = img.naturalHeight
+      const rows = Math.max(1, Math.floor(splitRows))
+      const cols = Math.max(1, Math.floor(splitCols))
+      const cellW = Math.floor(w / cols)
+      const cellH = Math.floor(h / rows)
+      if (cellW <= 0 || cellH <= 0) throw new Error('Split too small')
+      const canvas = document.createElement('canvas')
+      canvas.width = cellW
+      canvas.height = cellH
+      const ctx = canvas.getContext('2d')!
+      const baseName = splitFile.name.replace(/\.[^.]+$/, '')
+      const files: File[] = []
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          ctx.clearRect(0, 0, cellW, cellH)
+          ctx.drawImage(img, c * cellW, r * cellH, cellW, cellH, 0, 0, cellW, cellH)
+          const blob = await new Promise<Blob>((resolve, reject) => {
+            canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('canvas'))), 'image/png')
+          })
+          files.push(new File([blob], `${baseName}_${r}_${c}.png`, { type: 'image/png' }))
+        }
+      }
+      setCombineFiles(files)
+      message.success(t('imagesToSingleSplitSuccess', { n: files.length }))
+    } catch (e) {
+      message.error(t('imagesToSingleSplitFailed') + ': ' + String(e))
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const runImagesToSingle = async () => {
     if (combineFiles.length === 0) return
@@ -343,11 +417,81 @@ export default function GifFrameConverter() {
     a.click()
   }
 
+  const runSimpleStitch = async () => {
+    if (stitchFiles.length === 0) return
+    setLoading(true)
+    setStitchResultUrl((old) => {
+      if (old) URL.revokeObjectURL(old)
+      return null
+    })
+    try {
+      const imgs: HTMLImageElement[] = []
+      for (const f of stitchFiles) {
+        const url = URL.createObjectURL(f)
+        const img = await new Promise<HTMLImageElement>((res, rej) => {
+          const i = new Image()
+          i.onload = () => res(i)
+          i.onerror = () => rej(new Error('load'))
+          i.src = url
+        })
+        URL.revokeObjectURL(url)
+        imgs.push(img)
+      }
+      const isVertical = stitchDirection === 'vertical'
+      let outW: number
+      let outH: number
+      if (isVertical) {
+        outW = Math.max(...imgs.map((i) => i.naturalWidth))
+        outH = imgs.reduce((s, i) => s + i.naturalHeight, 0)
+      } else {
+        outW = imgs.reduce((s, i) => s + i.naturalWidth, 0)
+        outH = Math.max(...imgs.map((i) => i.naturalHeight))
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = outW
+      canvas.height = outH
+      const ctx = canvas.getContext('2d')!
+      let dx = 0
+      let dy = 0
+      for (let i = 0; i < imgs.length; i++) {
+        const img = imgs[i]!
+        const w = img.naturalWidth
+        const h = img.naturalHeight
+        if (isVertical) {
+          dx = (outW - w) / 2
+          ctx.drawImage(img, 0, 0, w, h, dx, dy, w, h)
+          dy += h
+        } else {
+          dy = (outH - h) / 2
+          ctx.drawImage(img, 0, 0, w, h, dx, dy, w, h)
+          dx += w
+        }
+      }
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('canvas'))), 'image/png')
+      })
+      setStitchResultUrl(URL.createObjectURL(blob))
+      message.success(t('simpleStitchSuccess'))
+    } catch (e) {
+      message.error(t('simpleStitchFailed') + ': ' + String(e))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const downloadStitch = () => {
+    if (!stitchResultUrl) return
+    const a = document.createElement('a')
+    a.href = stitchResultUrl
+    a.download = 'stitched.png'
+    a.click()
+  }
+
   return (
     <Space direction="vertical" size="large" style={{ width: '100%', paddingTop: 8 }}>
       <Tabs
         activeKey={activeTab}
-        onChange={(k) => setActiveTab(k as 'gif2frames' | 'frames2gif' | 'images2single')}
+        onChange={(k) => setActiveTab(k as 'gif2frames' | 'frames2gif' | 'images2single' | 'simpleStitch')}
         items={[
           {
             key: 'gif2frames',
@@ -551,6 +695,77 @@ export default function GifFrameConverter() {
                   <Text type="secondary">{t('imagesToSingleCols')}:</Text>
                   <InputNumber min={1} max={64} value={combineCols} onChange={(v) => setCombineCols(v ?? 4)} style={{ width: 72 }} />
                 </Space>
+                <Space wrap align="center" style={{ marginBottom: 12 }}>
+                  <Text type="secondary">{t('imagesToSingleInputMode')}:</Text>
+                  <Radio.Group
+                    value={imagesToSingleInputMode}
+                    onChange={(e) => setImagesToSingleInputMode(e.target.value)}
+                    optionType="button"
+                    size="small"
+                  >
+                    <Radio.Button value="multi">{t('imagesToSingleInputMulti')}</Radio.Button>
+                    <Radio.Button value="split">{t('imagesToSingleInputSplit')}</Radio.Button>
+                  </Radio.Group>
+                </Space>
+                {imagesToSingleInputMode === 'split' && (
+                  <div style={{ marginBottom: 16 }}>
+                    <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>{t('imagesToSingleSplitHint')}</Text>
+                    <Space wrap align="center" style={{ marginBottom: 8 }}>
+                      <InputNumber min={1} max={32} value={splitRows} onChange={(v) => setSplitRows(v ?? 2)} style={{ width: 64 }} addonBefore={t('imagesToSingleSplitRows')} />
+                      <InputNumber min={1} max={32} value={splitCols} onChange={(v) => setSplitCols(v ?? 2)} style={{ width: 64 }} addonBefore={t('imagesToSingleSplitCols')} />
+                    </Space>
+                    <StashDropZone onStashDrop={(f) => setSplitFile(f)}>
+                      <Dragger
+                        accept={IMAGE_ACCEPT.join(',')}
+                        maxCount={1}
+                        fileList={splitFile ? [{ uid: 'split-1', name: splitFile.name } as UploadFile] : []}
+                        beforeUpload={(f) => {
+                          setSplitFile(f)
+                          return false
+                        }}
+                        onRemove={() => setSplitFile(null)}
+                      >
+                        <p className="ant-upload-text">{t('imagesToSingleSplitUploadHint')}</p>
+                      </Dragger>
+                    </StashDropZone>
+                    {splitFileUrl && (
+                      <div style={{ marginTop: 8 }}>
+                        <Text type="secondary" style={{ fontSize: 12 }}>{t('imgOriginalPreview')}:</Text>
+                        <div style={{ marginTop: 4, display: 'inline-block', padding: 8, background: 'repeating-conic-gradient(#c9bfb0 0% 25%, #e4dbcf 0% 50%) 50% / 16px 16px', borderRadius: 4, border: '1px solid #9a8b78' }}>
+                          <StashableImage src={splitFileUrl} alt="" style={{ maxWidth: 200, maxHeight: 120, display: 'block' }} />
+                        </div>
+                      </div>
+                    )}
+                    <Button
+                      type="primary"
+                      loading={loading}
+                      onClick={runSplitSingleImage}
+                      disabled={!splitFile}
+                      style={{ marginTop: 8 }}
+                    >
+                      {loading ? t('imagesToSingleSplitBtnLoading') : t('imagesToSingleSplitBtn')}
+                    </Button>
+                  </div>
+                )}
+                {imagesToSingleInputMode === 'multi' && (
+                  <StashDropZone onStashDrop={(f) => setCombineFiles((prev) => [...prev, f])}>
+                    <Dragger
+                      accept={IMAGE_ACCEPT.join(',')}
+                      multiple
+                      fileList={combineFiles.map((f, i) => ({ uid: `c-${i}`, name: f.name } as UploadFile))}
+                      beforeUpload={(f) => {
+                        setCombineFiles((prev) => [...prev, f])
+                        return false
+                      }}
+                      onRemove={(file) => {
+                        const idx = combineFiles.findIndex((_, i) => `c-${i}` === file.uid)
+                        if (idx >= 0) setCombineFiles((prev) => prev.filter((_, i) => i !== idx))
+                      }}
+                    >
+                      <p className="ant-upload-text">{t('framesUploadHint')}</p>
+                    </Dragger>
+                  </StashDropZone>
+                )}
                 {combineFiles.length > 0 && combineInputUrls.length > 0 && (
                   <div style={{ marginBottom: 16 }}>
                     <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>{t('imagesToSingleCropHint')}</Text>
@@ -613,23 +828,6 @@ export default function GifFrameConverter() {
                     </div>
                   </div>
                 )}
-                <StashDropZone onStashDrop={(f) => setCombineFiles((prev) => [...prev, f])}>
-                  <Dragger
-                    accept={IMAGE_ACCEPT.join(',')}
-                    multiple
-                    fileList={combineFiles.map((f, i) => ({ uid: `c-${i}`, name: f.name } as UploadFile))}
-                    beforeUpload={(f) => {
-                      setCombineFiles((prev) => [...prev, f])
-                      return false
-                    }}
-                    onRemove={(file) => {
-                      const idx = combineFiles.findIndex((_, i) => `c-${i}` === file.uid)
-                      if (idx >= 0) setCombineFiles((prev) => prev.filter((_, i) => i !== idx))
-                    }}
-                  >
-                    <p className="ant-upload-text">{t('framesUploadHint')}</p>
-                  </Dragger>
-                </StashDropZone>
                 {combineInputUrls.length > 0 && (
                   <>
                     <Text strong style={{ display: 'block', marginTop: 16, marginBottom: 8 }}>{t('imgOriginalPreview')}</Text>
@@ -639,17 +837,137 @@ export default function GifFrameConverter() {
                         background: 'repeating-conic-gradient(#c9bfb0 0% 25%, #e4dbcf 0% 50%) 50% / 16px 16px',
                         borderRadius: 8,
                         border: '1px solid #9a8b78',
-                        display: 'inline-block',
+                        width: '100%',
+                        maxWidth: 720,
                       }}
                     >
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, maxHeight: 200, overflow: 'auto' }}>
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: `repeat(${Math.max(1, combineCols)}, 1fr)`,
+                          gap: 12,
+                          maxHeight: 600,
+                          overflow: 'auto',
+                        }}
+                      >
                         {combineInputUrls.map((url, i) => (
-                          <StashableImage
+                          <div
                             key={i}
-                            src={url}
-                            alt={`${t('frame')} ${i + 1}`}
-                            style={{ maxWidth: 80, maxHeight: 80, objectFit: 'contain', border: '1px solid rgba(0,0,0,0.1)' }}
-                          />
+                            style={{
+                              position: 'relative',
+                              display: 'inline-block',
+                              opacity: dragReorderIdx === i ? 0.6 : 1,
+                              border: dragReorderIdx === i ? '2px dashed #b55233' : 'none',
+                              borderRadius: 4,
+                            }}
+                            onDragOver={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              e.dataTransfer.dropEffect = 'move'
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              const from = dragReorderIdx
+                              if (from === null || from === i) return
+                              setCombineFiles((prev) => {
+                                const next = [...prev]
+                                const [item] = next.splice(from, 1)
+                                next.splice(i, 0, item!)
+                                return next
+                              })
+                              setDragReorderIdx(null)
+                            }}
+                            onDragLeave={() => {}}
+                          >
+                            <StashableImage
+                              src={url}
+                              alt={`${t('frame')} ${i + 1}`}
+                              draggable={false}
+                              style={{ maxWidth: 120, maxHeight: 120, width: '100%', objectFit: 'contain', imageRendering: 'pixelated', border: '1px solid rgba(0,0,0,0.1)', display: 'block' }}
+                            />
+                            <span
+                              draggable
+                              onDragStart={(e) => {
+                                e.stopPropagation()
+                                e.dataTransfer.effectAllowed = 'move'
+                                e.dataTransfer.setData('text/plain', String(i))
+                                setDragReorderIdx(i)
+                              }}
+                              onDragEnd={() => setDragReorderIdx(null)}
+                              style={{
+                                position: 'absolute',
+                                top: 2,
+                                left: 2,
+                                width: 18,
+                                height: 18,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'rgba(0,0,0,0.5)',
+                                cursor: 'grab',
+                                background: 'rgba(255,255,255,0.8)',
+                                borderRadius: 2,
+                                zIndex: 1,
+                              }}
+                            >
+                              <DragOutlined style={{ fontSize: 12 }} />
+                            </span>
+                            <Button
+                              type="primary"
+                              danger
+                              size="small"
+                              icon={<DeleteOutlined />}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setCombineFiles((prev) => prev.filter((_, idx) => idx !== i))
+                              }}
+                              style={{
+                                position: 'absolute',
+                                top: 2,
+                                right: 2,
+                                width: 18,
+                                height: 18,
+                                minWidth: 18,
+                                padding: 0,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                opacity: 0.9,
+                                fontSize: 10,
+                              }}
+                            />
+                            {i % combineCols === 0 && (
+                              <Tooltip title={t('imagesToSingleDeleteRow')}>
+                                <Button
+                                  type="primary"
+                                  danger
+                                  size="small"
+                                  icon={<DeleteOutlined />}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    const rowStart = Math.floor(i / combineCols) * combineCols
+                                    const rowEnd = Math.min(rowStart + combineCols, combineFiles.length)
+                                    setCombineFiles((prev) => prev.filter((_, idx) => idx < rowStart || idx >= rowEnd))
+                                  }}
+                                  style={{
+                                    position: 'absolute',
+                                    bottom: 2,
+                                    left: 2,
+                                    width: 18,
+                                    height: 18,
+                                    minWidth: 18,
+                                    padding: 0,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    opacity: 0.9,
+                                    fontSize: 10,
+                                  }}
+                                />
+                              </Tooltip>
+                            )}
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -679,6 +997,103 @@ export default function GifFrameConverter() {
                     >
                       <StashableImage
                         src={combinedUrl}
+                        alt={t('imgPreview')}
+                        style={{ maxWidth: '100%', maxHeight: 400, display: 'block', imageRendering: 'pixelated' }}
+                      />
+                    </div>
+                  </>
+                )}
+              </>
+            ),
+          },
+          {
+            key: 'simpleStitch',
+            label: (
+              <span>
+                <LayoutOutlined /> {t('simpleStitch')}
+              </span>
+            ),
+            children: (
+              <>
+                <Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>{t('simpleStitchHint')}</Text>
+                <Space wrap align="center" style={{ marginBottom: 12 }}>
+                  <Text type="secondary">{t('simpleStitchDirection')}:</Text>
+                  <Radio.Group
+                    value={stitchDirection}
+                    onChange={(e) => setStitchDirection(e.target.value)}
+                    optionType="button"
+                    size="small"
+                  >
+                    <Radio.Button value="vertical">{t('simpleStitchVertical')}</Radio.Button>
+                    <Radio.Button value="horizontal">{t('simpleStitchHorizontal')}</Radio.Button>
+                  </Radio.Group>
+                </Space>
+                <StashDropZone onStashDrop={(f) => setStitchFiles((prev) => [...prev, f])}>
+                  <Dragger
+                    accept={IMAGE_ACCEPT.join(',')}
+                    multiple
+                    fileList={stitchFiles.map((f, i) => ({ uid: `s-${i}`, name: f.name } as UploadFile))}
+                    beforeUpload={(f) => {
+                      setStitchFiles((prev) => [...prev, f])
+                      return false
+                    }}
+                    onRemove={(file) => {
+                      const idx = stitchFiles.findIndex((_, i) => `s-${i}` === file.uid)
+                      if (idx >= 0) setStitchFiles((prev) => prev.filter((_, i) => i !== idx))
+                    }}
+                  >
+                    <p className="ant-upload-text">{t('simpleStitchUploadHint')}</p>
+                  </Dragger>
+                </StashDropZone>
+                {stitchInputUrls.length > 0 && (
+                  <>
+                    <Text strong style={{ display: 'block', marginTop: 16, marginBottom: 8 }}>{t('imgOriginalPreview')}</Text>
+                    <div
+                      style={{
+                        padding: 16,
+                        background: 'repeating-conic-gradient(#c9bfb0 0% 25%, #e4dbcf 0% 50%) 50% / 16px 16px',
+                        borderRadius: 8,
+                        border: '1px solid #9a8b78',
+                        display: 'inline-block',
+                      }}
+                    >
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, maxHeight: 200, overflow: 'auto' }}>
+                        {stitchInputUrls.map((url, i) => (
+                          <StashableImage
+                            key={i}
+                            src={url}
+                            alt={`${t('frame')} ${i + 1}`}
+                            style={{ maxWidth: 80, maxHeight: 80, objectFit: 'contain', border: '1px solid rgba(0,0,0,0.1)' }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+                <Space style={{ marginTop: 16 }}>
+                  <Button type="primary" loading={loading} onClick={runSimpleStitch} disabled={stitchFiles.length === 0}>
+                    {t('simpleStitchRun')}
+                  </Button>
+                  {stitchResultUrl && (
+                    <Button icon={<DownloadOutlined />} onClick={downloadStitch}>
+                      {t('simpleStitchDownload')}
+                    </Button>
+                  )}
+                </Space>
+                {stitchResultUrl && (
+                  <>
+                    <Text strong style={{ display: 'block', marginTop: 24, marginBottom: 8 }}>{t('imgPreview')}</Text>
+                    <div
+                      style={{
+                        padding: 16,
+                        background: 'repeating-conic-gradient(#c9bfb0 0% 25%, #e4dbcf 0% 50%) 50% / 16px 16px',
+                        borderRadius: 8,
+                        border: '1px solid #9a8b78',
+                        display: 'inline-block',
+                      }}
+                    >
+                      <StashableImage
+                        src={stitchResultUrl}
                         alt={t('imgPreview')}
                         style={{ maxWidth: '100%', maxHeight: 400, display: 'block', imageRendering: 'pixelated' }}
                       />

@@ -12,6 +12,7 @@ import {
   applyChromaKey,
   applyInnerStroke,
   cropImageBlob,
+  extendImageBottom,
   resizeImageToBlob,
 } from './ParamsStep/utils'
 import ImageCropEditor from './ImageResizeStroke/ImageCropEditor'
@@ -44,6 +45,7 @@ export default function ImageResizeStroke() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null)
   const [loading, setLoading] = useState(false)
+  const [extendLoading, setExtendLoading] = useState(false)
 
   const croppedW = originalSize ? Math.max(1, originalSize.w - cropRegion.left - cropRegion.right) : 0
   const croppedH = originalSize ? Math.max(1, originalSize.h - cropRegion.top - cropRegion.bottom) : 0
@@ -200,6 +202,24 @@ export default function ImageResizeStroke() {
     a.click()
     URL.revokeObjectURL(url)
     message.success(t('downloadStarted'))
+  }
+
+  const handleExtendBottom = async () => {
+    if (!previewBlob) return
+    setExtendLoading(true)
+    try {
+      const blob = await extendImageBottom(previewBlob, 48)
+      setPreviewBlob(blob)
+      setPreviewUrl((old) => {
+        if (old) URL.revokeObjectURL(old)
+        return URL.createObjectURL(blob)
+      })
+      message.success(t('imgExtendBottomSuccess'))
+    } catch (e) {
+      message.error(t('exportFailed') + ': ' + formatError(e, t))
+    } finally {
+      setExtendLoading(false)
+    }
   }
 
   const hasCrop = cropRegion.left > 0 || cropRegion.top > 0 || cropRegion.right > 0 || cropRegion.bottom > 0
@@ -442,9 +462,14 @@ export default function ImageResizeStroke() {
                 />
               </div>
               <div style={{ marginTop: 12 }}>
-                <Button type="primary" icon={<DownloadOutlined />} onClick={download}>
-                  {t('imgDownload')}
-                </Button>
+                <Space>
+                  <Button type="primary" loading={extendLoading} onClick={handleExtendBottom}>
+                    {t('imgExtendBottom')}
+                  </Button>
+                  <Button type="primary" icon={<DownloadOutlined />} onClick={download}>
+                    {t('imgDownload')}
+                  </Button>
+                </Space>
               </div>
             </>
           )}
