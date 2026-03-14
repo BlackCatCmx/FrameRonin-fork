@@ -210,6 +210,7 @@ export default function GifFrameConverter() {
   const [loading, setLoading] = useState(false)
   const [framesZipUrl, setFramesZipUrl] = useState<string | null>(null)
   const [extractedFrameUrls, setExtractedFrameUrls] = useState<string[]>([])
+  const [extractedFrameFiles, setExtractedFrameFiles] = useState<File[]>([])
   const [gifUrl, setGifUrl] = useState<string | null>(null)
 
   const [combineFiles, setCombineFiles] = useState<File[]>([])
@@ -437,6 +438,7 @@ export default function GifFrameConverter() {
     if (!gifFile) return
     setLoading(true)
     revokeExtractedPreviews()
+    setExtractedFrameFiles([])
     setFramesZipUrl((old) => {
       if (old) URL.revokeObjectURL(old)
       return null
@@ -453,7 +455,9 @@ export default function GifFrameConverter() {
 
       const zip = new JSZip()
       const previewUrls: string[] = []
+      const frameFiles: File[] = []
       const maxPreview = 24
+      const baseName = gifFile.name.replace(/\.gif$/i, '') || 'frames'
       for (let i = 0; i < frames.length; i++) {
         const f = frames[i] as { patch: Uint8ClampedArray; dims: { top: number; left: number; width: number; height: number }; disposalType?: number }
         prevBuf = compositeFrame(prevBuf, f, w, h) as typeof prevBuf
@@ -467,13 +471,16 @@ export default function GifFrameConverter() {
         const blob = await new Promise<Blob>((resolve, reject) => {
           canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('canvas'))), 'image/png')
         })
+        const file = new File([blob], `${baseName}_frame_${String(i).padStart(3, '0')}.png`, { type: 'image/png' })
         zip.file(`frame_${String(i).padStart(3, '0')}.png`, blob)
+        frameFiles.push(file)
         if (previewUrls.length < maxPreview) {
           previewUrls.push(URL.createObjectURL(blob))
         }
       }
 
       setExtractedFrameUrls(previewUrls)
+      setExtractedFrameFiles(frameFiles)
       const zipBlob = await zip.generateAsync({ type: 'blob' })
       setFramesZipUrl(URL.createObjectURL(zipBlob))
       message.success(t('gifExtractSuccess', { n: frames.length }))
@@ -575,6 +582,22 @@ export default function GifFrameConverter() {
     a.click()
   }
 
+  const importFramesToCombine = () => {
+    if (extractedFrameFiles.length === 0) return
+    setCombineFiles(extractedFrameFiles)
+    setImagesToSingleInputMode('multi')
+    setCombinedUrl((old) => {
+      if (old) URL.revokeObjectURL(old)
+      return null
+    })
+    setCropTop(0)
+    setCropBottom(0)
+    setCropLeft(0)
+    setCropRight(0)
+    setActiveTab('images2single')
+    message.success(t('gifFramesToCombineSuccess', { n: extractedFrameFiles.length }))
+  }
+
   const downloadGif = () => {
     if (!gifUrl) return
     const a = document.createElement('a')
@@ -673,6 +696,7 @@ export default function GifFrameConverter() {
                   onStashDrop={(f) => {
                     setGifFile(f)
                     revokeExtractedPreviews()
+                    setExtractedFrameFiles([])
                     setFramesZipUrl((old) => {
                       if (old) URL.revokeObjectURL(old)
                       return null
@@ -686,6 +710,7 @@ export default function GifFrameConverter() {
                     beforeUpload={(f) => {
                       setGifFile(f)
                       revokeExtractedPreviews()
+                      setExtractedFrameFiles([])
                       setFramesZipUrl((old) => {
                         if (old) URL.revokeObjectURL(old)
                         return null
@@ -717,13 +742,18 @@ export default function GifFrameConverter() {
                     </div>
                   </>
                 )}
-                <Space style={{ marginTop: 16 }}>
+                <Space style={{ marginTop: 16 }} wrap>
                   <Button type="primary" loading={loading} onClick={runGifToFrames} disabled={!gifFile}>
                     {t('gifToFrames')}
                   </Button>
                   {framesZipUrl && (
                     <Button icon={<DownloadOutlined />} onClick={downloadZip}>
                       {t('gifDownloadFrames')}
+                    </Button>
+                  )}
+                  {extractedFrameFiles.length > 0 && (
+                    <Button icon={<MergeCellsOutlined />} onClick={importFramesToCombine}>
+                      {t('gifFramesToCombine')}
                     </Button>
                   )}
                 </Space>

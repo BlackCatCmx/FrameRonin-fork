@@ -12,7 +12,7 @@ import StashDropZone from './StashDropZone'
 import StashableImage from './StashableImage'
 import {
   getWatermarkSize,
-  getWatermarkPosition,
+  getWatermarkParams,
   removeWatermarkReverseAlpha,
   getEmbeddedAlphaMask,
   createApproxAlphaMap,
@@ -64,21 +64,21 @@ export default function ImageGeminiWatermark() {
 
       const w = img.naturalWidth
       const h = img.naturalHeight
-      const size: WatermarkSize = sizeMode === 'auto' ? getWatermarkSize(w, h) : sizeMode === '48' ? 48 : 96
-      const pos = getWatermarkPosition(w, h, size)
+      const baseSize: WatermarkSize = sizeMode === 'auto' ? getWatermarkSize(w, h) : sizeMode === '48' ? 48 : 96
+      const params = getWatermarkParams(w, h, baseSize)
 
       let alphaMap: Float32Array
       let mapW: number
       let mapH: number
 
       try {
-        const loaded = await getEmbeddedAlphaMask(size)
+        const loaded = await getEmbeddedAlphaMask(baseSize)
         alphaMap = loaded.alpha
         mapW = loaded.width
         mapH = loaded.height
       } catch {
-        alphaMap = createApproxAlphaMap(size)
-        mapW = mapH = size
+        alphaMap = createApproxAlphaMap(baseSize)
+        mapW = mapH = baseSize
       }
 
       const canvas = document.createElement('canvas')
@@ -88,7 +88,8 @@ export default function ImageGeminiWatermark() {
       ctx.drawImage(img, 0, 0)
       const imageData = ctx.getImageData(0, 0, w, h)
 
-      removeWatermarkReverseAlpha(imageData, alphaMap, mapW, mapH, pos.x, pos.y, 255)
+      const alphaScale = baseSize === 96 ? 0.85 : 1
+      removeWatermarkReverseAlpha(imageData, alphaMap, mapW, mapH, params.x, params.y, 255, alphaScale)
       ctx.putImageData(imageData, 0, 0)
 
       const blob = await new Promise<Blob | null>((resolve) => {
