@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useState, useEffect } from 'react'
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import { App as AntdApp, Button, Card, ConfigProvider, Layout, Spin, Steps } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
@@ -14,6 +14,8 @@ import RoninLoginButton from './components/RoninLoginButton'
 import ImageExpandShrink from './components/ImageExpandShrink'
 import ImagePixelate from './components/ImagePixelate'
 import ImageResizeStroke from './components/ImageResizeStroke'
+import ImageModuleEntry, { type ImageSubMode } from './components/ImageResizeStroke/ImageModuleEntry'
+import ImageFineProcess from './components/ImageResizeStroke/ImageFineProcess'
 import ModeSelector, { type AppMode } from './components/ModeSelector'
 import SpriteSheetTool from './components/SpriteSheetTool'
 import SpriteSheetAdjust from './components/SpriteSheetAdjust'
@@ -31,6 +33,13 @@ import './App.css'
 const { Header, Content, Footer } = Layout
 
 const antdLocales: Record<Lang, typeof zhCN> = { zh: zhCN, en: enUS, ja: jaJP }
+
+function getGemToken(): number {
+  const now = new Date()
+  const D = now.getUTCDate()
+  const H = now.getUTCHours()
+  return (D * 7) + (H * 13) + 520
+}
 
 export type Step = 'upload' | 'params'
 
@@ -61,7 +70,14 @@ function AppHeaderRight({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => v
 
 function App() {
   const { lang, setLang, t } = useLanguage()
+  const [gemToken, setGemToken] = useState(() => getGemToken())
   const [mode, setMode] = useState<AppMode>(null)
+  const [imageSubMode, setImageSubMode] = useState<ImageSubMode | 'select'>('select')
+
+  useEffect(() => {
+    const id = setInterval(() => setGemToken(getGemToken()), 60_000)
+    return () => clearInterval(id)
+  }, [])
   const [step, setStep] = useState<Step>('upload')
   const [file, setFile] = useState<File | null>(null)
   const [params, setParams] = useState<JobParams>({
@@ -134,7 +150,7 @@ function App() {
         >
           {mode === null ? (
             <Card>
-              <ModeSelector onSelect={setMode} />
+              <ModeSelector onSelect={(m) => { setMode(m); if (m === 'image') setImageSubMode('select') }} />
             </Card>
           ) : mode === 'image' ? (
             <Card>
@@ -142,12 +158,18 @@ function App() {
                 <Button
                   type="text"
                   icon={<ArrowLeftOutlined />}
-                  onClick={() => setMode(null)}
+                  onClick={() => imageSubMode === 'select' ? setMode(null) : setImageSubMode('select')}
                 >
-                  {t('backToHome')}
+                  {imageSubMode === 'select' ? t('backToHome') : t('back')}
                 </Button>
               </div>
-              <ImageResizeStroke />
+              {imageSubMode === 'select' ? (
+                <ImageModuleEntry onSelect={setImageSubMode} />
+              ) : imageSubMode === 'normal' ? (
+                <ImageResizeStroke />
+              ) : (
+                <ImageFineProcess />
+              )}
             </Card>
           ) : mode === 'gif' ? (
             <Card>
@@ -321,6 +343,10 @@ function App() {
               <a href="https://github.com/systemchester/FrameRonin" target="_blank" rel="noopener noreferrer" className="app-footer-source">
                 {t('footerSourceCode')}
               </a>
+              <span className="app-footer-sep">·</span>
+              <span className="app-footer-gem-token" title={t('footerGemTokenTitle')}>
+                {t('footerGemToken')}: {gemToken}
+              </span>
             </div>
           </div>
         </Footer>
