@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Button, ColorPicker, Slider, Space, Typography } from 'antd'
-import { AimOutlined, DeleteOutlined, DownloadOutlined, EditOutlined, UndoOutlined } from '@ant-design/icons'
+import { Button, ColorPicker, message, Slider, Space, Typography } from 'antd'
+import { AimOutlined, DeleteOutlined, DownloadOutlined, EditOutlined, InboxOutlined, UndoOutlined } from '@ant-design/icons'
 import { useLanguage } from '../../i18n/context'
+import { useImageStash } from '../../stash/context'
 
 const { Text } = Typography
 
@@ -14,6 +15,7 @@ interface ImageFineEditorProps {
 
 export default function ImageFineEditor({ imageUrl, onExport }: ImageFineEditorProps) {
   const { t } = useLanguage()
+  const { addImage } = useImageStash()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [tool, setTool] = useState<Tool>('eraser')
@@ -404,6 +406,22 @@ export default function ImageFineEditor({ imageUrl, onExport }: ImageFineEditorP
     )
   }, [onExport])
 
+  const handleSendToStash = useCallback(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob)
+          addImage(url, 'fine-edited.png')
+          message.success(t('imgFineEditorSendToStashSuccess'))
+        }
+      },
+      'image/png',
+      0.95
+    )
+  }, [addImage, t])
+
   if (loadError) {
     return (
       <div style={{ padding: 48, textAlign: 'center', color: '#c41e3a' }}>
@@ -488,6 +506,9 @@ export default function ImageFineEditor({ imageUrl, onExport }: ImageFineEditorP
           </Button>
           <Button type="primary" icon={<DownloadOutlined />} onClick={handleDownload}>
             {t('imgDownload')}
+          </Button>
+          <Button icon={<InboxOutlined />} onClick={handleSendToStash}>
+            {t('imgFineEditorSendToStash')}
           </Button>
         </Space>
       </div>

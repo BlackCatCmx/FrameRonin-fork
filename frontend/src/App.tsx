@@ -24,6 +24,7 @@ import NanobananaFullChar from './components/NanobananaFullChar'
 import SeedanceWatermarkRemover from './components/SeedanceWatermarkRemover'
 import AssetsAndSourceShare from './components/AssetsAndSourceShare'
 import ControlTest from './components/ControlTest'
+import RoninPro from './components/RoninPro'
 
 const ImageMatte = lazy(() => import('./components/ImageMatte'))
 import ParamsStep from './components/ParamsStep'
@@ -307,6 +308,10 @@ function App() {
             </Card>
           ) : mode === 'controlTest' ? (
             <ControlTest onBack={() => setMode(null)} />
+          ) : mode === 'roninPro' ? (
+            <Card>
+              <RoninPro onBack={() => setMode(null)} />
+            </Card>
           ) : (
             <>
               <Steps

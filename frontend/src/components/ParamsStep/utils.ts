@@ -560,6 +560,247 @@ export function applyChromaKey(
 }
 
 /**
+ * ChromaKey 色度键：连续区域（与左上角连通）用 80 容差，非连续区域用 30 容差。
+ * 取色仍为左上角第一像素。
+ */
+export function applyChromaKeyHybridTolerance(
+  dataUrl: string,
+  bgR: number,
+  bgG: number,
+  bgB: number,
+  contiguousTolerance: number,
+  nonContiguousTolerance: number,
+  feather: number
+): Promise<{ blob: Blob; dataUrl: string }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = img.width
+      canvas.height = img.height
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return reject(new Error('ERR_CANVAS_CREATE'))
+      ctx.drawImage(img, 0, 0)
+      const id = ctx.getImageData(0, 0, canvas.width, canvas.height)
+      const d = id.data
+      const w = canvas.width
+      const h = canvas.height
+
+      const idx = (x: number, y: number) => (y * w + x) * 4
+      const dist = (i: number) =>
+        Math.sqrt(
+          (d[i]! - bgR) ** 2 + (d[i + 1]! - bgG) ** 2 + (d[i + 2]! - bgB) ** 2
+        )
+      const matchContiguous = (i: number) => dist(i) <= contiguousTolerance
+
+      const contiguous = new Set<number>()
+      const start = idx(0, 0)
+      if (matchContiguous(start)) {
+        const stack: [number, number][] = [[0, 0]]
+        contiguous.add(start)
+        const vis = new Set<number>()
+        vis.add(start)
+        const dx = [0, 1, 0, -1]
+        const dy = [-1, 0, 1, 0]
+        while (stack.length > 0) {
+          const [x, y] = stack.pop()!
+          for (let k = 0; k < 4; k++) {
+            const nx = x + dx[k]!
+            const ny = y + dy[k]!
+            if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue
+            const i = idx(nx, ny)
+            if (vis.has(i)) continue
+            vis.add(i)
+            if (matchContiguous(i)) {
+              contiguous.add(i)
+              stack.push([nx, ny])
+            }
+          }
+        }
+      }
+
+      for (let i = 0; i < d.length; i += 4) {
+        const dst = Math.sqrt(
+          (d[i]! - bgR) ** 2 + (d[i + 1]! - bgG) ** 2 + (d[i + 2]! - bgB) ** 2
+        )
+        const isContiguous = contiguous.has(i)
+        const tol = isContiguous ? contiguousTolerance : nonContiguousTolerance
+        if (dst <= tol) {
+          d[i + 3] = 0
+        } else if (feather > 0 && dst < tol + feather) {
+          const t = (dst - tol) / feather
+          d[i + 3] = Math.round(255 * Math.min(1, t))
+        }
+      }
+      ctx.putImageData(id, 0, 0)
+      const resultDataUrl = canvas.toDataURL('image/png')
+      canvas.toBlob(
+        (blob) =>
+          blob
+            ? resolve({ blob, dataUrl: resultDataUrl })
+            : reject(new Error('ERR_EXPORT')),
+        'image/png',
+        0.95
+      )
+    }
+    img.onerror = () => reject(new Error('ERR_IMAGE_LOAD'))
+    img.src = dataUrl
+  })
+}
+
+/**
+ * ChromaKey 自适应：非连续区域抠图时，若某区域像素数 > 20，该区域容差 +40。
+ * 连续区域仍用 80 容差。
+ */
+export function applyChromaKeyAdaptiveRegion(
+  dataUrl: string,
+  bgR: number,
+  bgG: number,
+  bgB: number,
+  contiguousTolerance: number,
+  nonContiguousTolerance: number,
+  largeRegionThreshold: number,
+  largeRegionToleranceBonus: number,
+  feather: number
+): Promise<{ blob: Blob; dataUrl: string }> {
+  void feather
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = img.width
+      canvas.height = img.height
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return reject(new Error('ERR_CANVAS_CREATE'))
+      ctx.drawImage(img, 0, 0)
+      const id = ctx.getImageData(0, 0, canvas.width, canvas.height)
+      const d = id.data
+      const w = canvas.width
+      const h = canvas.height
+
+      const idx = (x: number, y: number) => (y * w + x) * 4
+      const dist = (i: number) =>
+        Math.sqrt(
+          (d[i]! - bgR) ** 2 + (d[i + 1]! - bgG) ** 2 + (d[i + 2]! - bgB) ** 2
+        )
+      const matchContiguous = (i: number) => dist(i) <= contiguousTolerance
+
+      const contiguous = new Set<number>()
+      const start = idx(0, 0)
+      if (matchContiguous(start)) {
+        const stack: [number, number][] = [[0, 0]]
+        contiguous.add(start)
+        const vis = new Set<number>()
+        vis.add(start)
+        const dx = [0, 1, 0, -1]
+        const dy = [-1, 0, 1, 0]
+        while (stack.length > 0) {
+          const [x, y] = stack.pop()!
+          for (let k = 0; k < 4; k++) {
+            const nx = x + dx[k]!
+            const ny = y + dy[k]!
+            if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue
+            const i = idx(nx, ny)
+            if (vis.has(i)) continue
+            vis.add(i)
+            if (matchContiguous(i)) {
+              contiguous.add(i)
+              stack.push([nx, ny])
+            }
+          }
+        }
+      }
+
+      const nonContiguousCandidates = new Set<number>()
+      const groupTolerance = Math.max(
+        nonContiguousTolerance + largeRegionToleranceBonus,
+        contiguousTolerance
+      )
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const i = idx(x, y)
+          if (contiguous.has(i)) continue
+          if (dist(i) <= groupTolerance) nonContiguousCandidates.add(i)
+        }
+      }
+
+      const pixelToRegion = new Map<number, number>()
+      const regionSizes: number[] = []
+      const vis = new Set<number>()
+      const dx = [0, 1, 0, -1]
+      const dy = [-1, 0, 1, 0]
+      let regionId = 0
+      for (const seed of nonContiguousCandidates) {
+        if (vis.has(seed)) continue
+        const stack = [seed]
+        vis.add(seed)
+        const members: number[] = []
+        while (stack.length > 0) {
+          const i = stack.pop()!
+          members.push(i)
+          const x = (i / 4) % w
+          const y = Math.floor(i / 4 / w)
+          for (let k = 0; k < 4; k++) {
+            const nx = x + dx[k]!
+            const ny = y + dy[k]!
+            if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue
+            const ni = idx(nx, ny)
+            if (vis.has(ni) || !nonContiguousCandidates.has(ni)) continue
+            vis.add(ni)
+            stack.push(ni)
+          }
+        }
+        for (const m of members) pixelToRegion.set(m, regionId)
+        regionSizes.push(members.length)
+        regionId++
+      }
+
+      const effectiveTol = (rId: number) =>
+        regionSizes[rId]! > largeRegionThreshold
+          ? nonContiguousTolerance + largeRegionToleranceBonus
+          : nonContiguousTolerance
+
+      for (let i = 0; i < d.length; i += 4) {
+        const dst = Math.sqrt(
+          (d[i]! - bgR) ** 2 + (d[i + 1]! - bgG) ** 2 + (d[i + 2]! - bgB) ** 2
+        )
+        if (contiguous.has(i)) {
+          const tol = contiguousTolerance
+          if (dst <= tol) d[i + 3] = 0
+          else if (feather > 0 && dst < tol + feather) {
+            const t = (dst - tol) / feather
+            d[i + 3] = Math.round(255 * Math.min(1, t))
+          }
+        } else {
+          const rId = pixelToRegion.get(i)
+          const tol =
+            rId !== undefined ? effectiveTol(rId) : nonContiguousTolerance
+          if (dst <= tol) d[i + 3] = 0
+          else if (feather > 0 && dst < tol + feather) {
+            const t = (dst - tol) / feather
+            d[i + 3] = Math.round(255 * Math.min(1, t))
+          }
+        }
+      }
+      ctx.putImageData(id, 0, 0)
+      const resultDataUrl = canvas.toDataURL('image/png')
+      canvas.toBlob(
+        (blob) =>
+          blob
+            ? resolve({ blob, dataUrl: resultDataUrl })
+            : reject(new Error('ERR_EXPORT')),
+        'image/png',
+        0.95
+      )
+    }
+    img.onerror = () => reject(new Error('ERR_IMAGE_LOAD'))
+    img.src = dataUrl
+  })
+}
+
+/**
  * 基于左上角(0,0)像素的连通域去背：仅移除与第一行第一像素连通的同色区域，
  * 不会移除图像中间孤立的同色像素。
  */
