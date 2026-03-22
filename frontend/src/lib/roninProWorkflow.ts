@@ -73,6 +73,8 @@ export interface WorkflowDocument {
   version: number
   nodes: WorkflowNode[]
   edges?: WorkflowEdge[]
+  /** 用户为预设起的名称（可选，用于展示与导出文件名） */
+  presetName?: string
 }
 
 export const WORKFLOW_PALETTE: { type: WorkflowNodeType; defaultParams: Record<string, number> }[] = [
@@ -365,13 +367,27 @@ export function serializeWorkflow(nodes: WorkflowNode[]): string {
   return JSON.stringify(doc, null, 2)
 }
 
-export function serializeWorkflowGraph(nodes: GraphNode[], edges: WorkflowEdge[]): string {
+export function serializeWorkflowGraph(
+  nodes: GraphNode[],
+  edges: WorkflowEdge[],
+  options?: { presetName?: string }
+): string {
   const doc: WorkflowDocument = {
     version: RONIN_PRO_WORKFLOW_GRAPH_VERSION,
     nodes,
     edges,
   }
+  const name = options?.presetName?.trim()
+  if (name) doc.presetName = name.slice(0, 120)
   return JSON.stringify(doc, null, 2)
+}
+
+/** 生成安全的下载文件名（不含扩展名） */
+export function sanitizeWorkflowPresetFileBase(name: string): string {
+  const trimmed = name.trim().slice(0, 80)
+  if (!trimmed) return 'roninpro-workflow'
+  const safe = trimmed.replace(/[/\\?%*:|"<>]/g, '_').replace(/\s+/g, '-')
+  return safe || 'roninpro-workflow'
 }
 
 export type ExecutionOrderError =
@@ -523,11 +539,19 @@ function parseOneNode(n: unknown, index: number, docVersion: number): GraphNode 
   return { id, type, params, x, y, rearrangeGrid }
 }
 
-export function parseWorkflowGraph(text: string): { nodes: GraphNode[]; edges: WorkflowEdge[] } {
+export function parseWorkflowGraph(text: string): {
+  nodes: GraphNode[]
+  edges: WorkflowEdge[]
+  presetName?: string
+} {
   const data = JSON.parse(text) as WorkflowDocument & { edges?: unknown[] }
   if (!data || typeof data.version !== 'number' || !Array.isArray(data.nodes)) {
     throw new Error('INVALID_WORKFLOW_JSON')
   }
+  const presetName =
+    typeof data.presetName === 'string' && data.presetName.trim()
+      ? data.presetName.trim().slice(0, 120)
+      : undefined
   const docVersion = data.version
   const nodes: GraphNode[] = []
   let i = 0
@@ -554,7 +578,7 @@ export function parseWorkflowGraph(text: string): { nodes: GraphNode[]; edges: W
       })
     }
   }
-  return { nodes, edges }
+  return { nodes, edges, presetName }
 }
 
 export function parseWorkflowJson(text: string): WorkflowNode[] {

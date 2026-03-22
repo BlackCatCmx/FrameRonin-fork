@@ -260,15 +260,6 @@ export default function WorkflowBlueprintCanvas({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div
-        style={{
-          fontSize: 12,
-          color: '#8b8b9a',
-          lineHeight: 1.5,
-        }}
-      >
-        {tHint('roninProWorkflowBlueprintHint')}
-      </div>
-      <div
         ref={viewportRef}
         onWheel={onViewportWheel}
         onContextMenu={(e) => e.preventDefault()}
@@ -285,7 +276,9 @@ export default function WorkflowBlueprintCanvas({
           }
         }}
         style={{
-          height: 520,
+          /* 蓝图主工作区：尽量占纵向空间，大屏上限约 940px */
+          height: 'clamp(620px, min(72vh, calc(100dvh - 300px)), 940px)',
+          minHeight: 620,
           borderRadius: 8,
           overflow: 'hidden',
           background: '#12141a',

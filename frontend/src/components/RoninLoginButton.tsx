@@ -2,6 +2,8 @@ import { Button, Dropdown } from 'antd'
 import type { MenuProps } from 'antd'
 import { WalletOutlined } from '@ant-design/icons'
 import { useAuth } from '../auth/context'
+import { NFT_CLAIM_CONTRACT_ADDRESS } from '../config/nftClaim'
+import { useNftOwnership } from '../hooks/useNftOwnership'
 import { useLanguage } from '../i18n/context'
 
 function formatAddress(addr: string) {
@@ -12,6 +14,7 @@ function formatAddress(addr: string) {
 export default function RoninLoginButton() {
   const { t } = useLanguage()
   const { address, isConnected, loading, error, connect, disconnect } = useAuth()
+  const holdsAppNft = useNftOwnership(address, NFT_CLAIM_CONTRACT_ADDRESS)
 
   const items: MenuProps['items'] = [
     {
@@ -31,6 +34,16 @@ export default function RoninLoginButton() {
         >
           <WalletOutlined />
           <span>{formatAddress(address)}</span>
+          {holdsAppNft === true ? (
+            <span
+              className="app-header-nft-crown"
+              title={t('headerNftCrownTitle')}
+              aria-label={t('headerNftCrownTitle')}
+              role="img"
+            >
+              👑
+            </span>
+          ) : null}
         </button>
       </Dropdown>
     )

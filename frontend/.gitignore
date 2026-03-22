@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# 源图仅保留 public/ 构建用副本
+bagei.png
+pixelmaster.png

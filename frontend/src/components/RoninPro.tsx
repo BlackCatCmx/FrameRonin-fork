@@ -5,6 +5,7 @@ import {
   ExperimentOutlined,
   ExpandOutlined,
   ForkOutlined,
+  GiftOutlined,
   LockOutlined,
   MergeCellsOutlined,
   ScissorOutlined,
@@ -18,6 +19,7 @@ import RoninProCustomSlice from './RoninProCustomSlice'
 import RoninProUnifySize from './RoninProUnifySize'
 import RoninProAdvancedPixel from './RoninProAdvancedPixel'
 import RoninProCustomWorkflow from './RoninProCustomWorkflow'
+import RoninProNftClaim from './RoninProNftClaim'
 
 const ACCENT = '#b55233'
 const ICON_BOX = 44
@@ -52,6 +54,12 @@ const RONIN_FEATURE_ENTRIES = [
     Icon: ExperimentOutlined,
     titleKey: 'roninProAdvancedPixel',
     descKey: 'roninProAdvancedPixelCardDesc',
+  },
+  {
+    id: 'nftClaim' as const,
+    Icon: GiftOutlined,
+    titleKey: 'roninProNftClaim',
+    descKey: 'roninProNftClaimDesc',
   },
 ]
 
@@ -129,8 +137,20 @@ export default function RoninPro({ onBack, deepLinkFeature = null, onDeepLinkCon
     )
   }
 
+  /** 自定义流程蓝图需要更大画布：接近视口宽；其它子页保持常规宽度 */
+  const shellMaxWidth =
+    activeFeature === 'customWorkflow' ? 'min(calc(100vw - 40px), 1920px)' : 1200
+
   return (
-    <div style={{ padding: '20px 24px 32px', maxWidth: 1200, margin: '0 auto' }}>
+    <div
+      style={{
+        padding: '20px 24px 32px',
+        maxWidth: shellMaxWidth,
+        margin: '0 auto',
+        width: '100%',
+        boxSizing: 'border-box',
+      }}
+    >
       <div
         style={{
           marginBottom: activeFeature ? 16 : 20,
@@ -264,6 +284,8 @@ export default function RoninPro({ onBack, deepLinkFeature = null, onDeepLinkCon
         <RoninProCustomWorkflow />
       ) : activeFeature === 'advancedPixel' ? (
         <RoninProAdvancedPixel />
+      ) : activeFeature === 'nftClaim' ? (
+        <RoninProNftClaim />
       ) : null}
     </div>
   )

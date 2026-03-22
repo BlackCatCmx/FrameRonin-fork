@@ -4,6 +4,12 @@ __pycache__
 *.pyo
 .Python
 .env
+.env.local
+frontend/.env.local
+# Hardhat / 合约：整个 contracts 目录不进入 Git（无例外）
+contracts/
+# 合约相关说明（仅本机，不推送）
+docs/CONTRACTS-LOCAL.md
 .venv
 venv
 *.egg-info

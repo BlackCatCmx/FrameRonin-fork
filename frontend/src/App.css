@@ -108,6 +108,13 @@
   min-width: 100px;
 }
 
+.app-header-nft-crown {
+  margin-left: 4px;
+  font-size: 13px;
+  line-height: 1;
+  user-select: none;
+}
+
 .app-header-lang-btn {
   padding: 4px 8px;
   font-size: 12px;

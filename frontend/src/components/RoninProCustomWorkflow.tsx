@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState, type CSSProperties } from 'react'
+import { Fragment, useCallback, useEffect, useState, type CSSProperties } from 'react'
 import {
   Button,
   Checkbox,
   Col,
+  Input,
   InputNumber,
   message,
   Row,
@@ -20,6 +21,7 @@ import {
   parseWorkflowGraph,
   resizeRearrangeGrid,
   runWorkflowOnBlob,
+  sanitizeWorkflowPresetFileBase,
   serializeWorkflowGraph,
   type GraphNode,
   type WorkflowEdge,
@@ -35,6 +37,35 @@ const { Text } = Typography
 
 const STORAGE_KEY = 'roninProCustomWorkflow.v3'
 const IMAGE_ACCEPT = ['.png', '.jpg', '.jpeg', '.webp']
+
+/** 右侧预设节点浮窗（fixed，不随画布滚动） */
+const PALETTE_FLOAT_OUTER: CSSProperties = {
+  position: 'fixed',
+  right: 16,
+  top: 'max(72px, 8vh)',
+  bottom: 24,
+  width: 'min(320px, calc(100vw - 32px))',
+  zIndex: 500,
+  display: 'flex',
+  flexDirection: 'column',
+  boxSizing: 'border-box',
+  padding: 12,
+  gap: 10,
+  background: 'var(--ant-color-bg-container)',
+  borderRadius: 12,
+  boxShadow: '0 8px 32px rgba(0,0,0,0.14), 0 0 0 1px rgba(0,0,0,0.06)',
+  border: '1px solid var(--ant-color-border-secondary)',
+}
+
+const PALETTE_FLOAT_SCROLL: CSSProperties = {
+  flex: 1,
+  minHeight: 0,
+  overflowY: 'auto',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 8,
+  paddingRight: 2,
+}
 
 const NODE_LABEL_I18N: Record<WorkflowNodeType, string> = {
   geminiWatermarkRemove: 'roninProWorkflowNode_geminiWatermarkRemove',
@@ -78,6 +109,8 @@ export default function RoninProCustomWorkflow() {
   const [fileItems, setFileItems] = useState<{ id: string; file: File }[]>([])
   const [results, setResults] = useState<{ name: string; url: string }[]>([])
   const [running, setRunning] = useState(false)
+  /** 导出预设名：写入 JSON 的 presetName，并用于下载文件名 */
+  const [presetName, setPresetName] = useState('')
 
   useEffect(() => {
     return () => {
@@ -218,11 +251,14 @@ export default function RoninProCustomWorkflow() {
 
   const saveJsonToFile = () => {
     try {
-      const json = serializeWorkflowGraph(graphNodes, graphEdges)
+      const json = serializeWorkflowGraph(graphNodes, graphEdges, {
+        presetName: presetName.trim() || undefined,
+      })
       const blob = new Blob([json], { type: 'application/json' })
       const a = document.createElement('a')
       a.href = URL.createObjectURL(blob)
-      a.download = 'roninpro-workflow.json'
+      const base = sanitizeWorkflowPresetFileBase(presetName)
+      a.download = `${base}.json`
       a.click()
       URL.revokeObjectURL(a.href)
       try {
@@ -245,9 +281,10 @@ export default function RoninProCustomWorkflow() {
         message.warning(t('roninProWorkflowNoLast'))
         return
       }
-      const { nodes, edges } = parseWorkflowGraph(raw)
+      const { nodes, edges, presetName: loadedName } = parseWorkflowGraph(raw)
       setGraphNodes(nodes)
       setGraphEdges(edges)
+      setPresetName(loadedName ?? '')
       message.success(t('roninProWorkflowLoadSuccess'))
     } catch {
       message.error(t('roninProWorkflowLoadFailed'))
@@ -261,9 +298,10 @@ export default function RoninProCustomWorkflow() {
     const reader = new FileReader()
     reader.onload = () => {
       try {
-        const { nodes, edges } = parseWorkflowGraph(String(reader.result))
+        const { nodes, edges, presetName: loadedName } = parseWorkflowGraph(String(reader.result))
         setGraphNodes(nodes)
         setGraphEdges(edges)
+        setPresetName(loadedName ?? '')
         try {
           localStorage.setItem(STORAGE_KEY, String(reader.result))
         } catch {
@@ -789,31 +827,9 @@ export default function RoninProCustomWorkflow() {
   )
 
   return (
-    <Space direction="vertical" size="large" style={{ width: '100%', maxWidth: 960 }}>
+    <Fragment>
+    <Space direction="vertical" size="large" style={{ width: '100%', maxWidth: '100%' }}>
       <Text type="secondary">{t('roninProCustomWorkflowHint')}</Text>
-
-      <div>
-        <Text strong>{t('roninProWorkflowPalette')}</Text>
-        <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {WORKFLOW_PALETTE.map((item) => (
-            <Button
-              key={item.type}
-              size="small"
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData('application/workflow-node-type', item.type)
-                e.dataTransfer.effectAllowed = 'copy'
-              }}
-              onClick={() => addNodeAt(item.type)}
-            >
-              {t(NODE_LABEL_I18N[item.type])}
-            </Button>
-          ))}
-        </div>
-        <div style={{ marginTop: 6, fontSize: 12, color: '#888' }}>
-          {t('roninProWorkflowPaletteHint')}
-        </div>
-      </div>
 
       <WorkflowBlueprintCanvas
         nodes={graphNodes}
@@ -828,6 +844,17 @@ export default function RoninProCustomWorkflow() {
 
       <div>
         <Text strong>{t('roninProWorkflowIoTitle')}</Text>
+        <div style={{ marginTop: 8 }}>
+          <Text style={{ fontSize: 12, color: '#9aa3b5' }}>{t('roninProWorkflowPresetName')}</Text>
+          <Input
+            value={presetName}
+            onChange={(e) => setPresetName(e.target.value)}
+            placeholder={t('roninProWorkflowPresetNamePlaceholder')}
+            maxLength={120}
+            allowClear
+            style={{ marginTop: 4, maxWidth: 400 }}
+          />
+        </div>
         <Space wrap style={{ marginTop: 8 }}>
           <Button onClick={saveJsonToFile}>{t('roninProWorkflowSaveJson')}</Button>
           <Button
@@ -918,5 +945,37 @@ export default function RoninProCustomWorkflow() {
         </div>
       )}
     </Space>
+
+    <aside style={PALETTE_FLOAT_OUTER} aria-label={t('roninProWorkflowPalette')}>
+      <Text strong style={{ fontSize: 13, display: 'block', flexShrink: 0 }}>
+        {t('roninProWorkflowPalette')}
+      </Text>
+      <div style={PALETTE_FLOAT_SCROLL}>
+        {WORKFLOW_PALETTE.map((item) => (
+          <Button
+            key={item.type}
+            size="small"
+            block
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData('application/workflow-node-type', item.type)
+              e.dataTransfer.effectAllowed = 'copy'
+            }}
+            onClick={() => addNodeAt(item.type)}
+            style={{
+              textAlign: 'left',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              minWidth: 0,
+              maxWidth: '100%',
+            }}
+          >
+            {t(NODE_LABEL_I18N[item.type])}
+          </Button>
+        ))}
+      </div>
+    </aside>
+    </Fragment>
   )
 }

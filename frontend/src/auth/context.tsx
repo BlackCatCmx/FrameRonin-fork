@@ -15,6 +15,13 @@ import {
 
 type RoninConnector = Awaited<ReturnType<typeof requestRoninWalletConnector>>
 
+export interface RoninTxRequest {
+  /** 合约地址 */
+  to: `0x${string}` | string
+  /** 已编码 calldata，如 `0x1249c58b` */
+  data: `0x${string}` | string
+}
+
 interface AuthState {
   address: string | null
   isConnected: boolean
@@ -22,6 +29,8 @@ interface AuthState {
   error: string | null
   connect: () => Promise<void>
   disconnect: () => void
+  /** Ronin 钱包合约调用（eth_sendTransaction），返回交易哈希 */
+  sendRoninTransaction: (tx: RoninTxRequest) => Promise<string>
 }
 
 const AuthContext = createContext<AuthState | null>(null)
@@ -40,6 +49,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAddress(null)
     setError(null)
   }, [])
+
+  const sendRoninTransaction = useCallback(async (tx: RoninTxRequest) => {
+    const c = connectorRef.current
+    if (!c || typeof c.getProvider !== 'function') {
+      throw new Error('WALLET_NO_PROVIDER')
+    }
+    // tanto-connect IBaseConnector：getAccounts() / getProvider()，无 getAddresses
+    let from = address
+    if (typeof c.getAccounts === 'function') {
+      const accounts = (await c.getAccounts()) as string[]
+      if (accounts?.[0]) from = accounts[0]
+    }
+    if (!from) throw new Error('NO_ACCOUNT')
+
+    const provider = (await c.getProvider()) as {
+      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>
+    }
+    if (!provider?.request) {
+      throw new Error('WALLET_NO_PROVIDER')
+    }
+    const hash = await provider.request({
+      method: 'eth_sendTransaction',
+      params: [
+        {
+          from,
+          to: tx.to,
+          data: tx.data,
+        },
+      ],
+    })
+    return String(hash)
+  }, [address])
 
   const connect = useCallback(async () => {
     setLoading(true)
@@ -131,6 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         error,
         connect,
         disconnect,
+        sendRoninTransaction,
       }}
     >
       {children}
