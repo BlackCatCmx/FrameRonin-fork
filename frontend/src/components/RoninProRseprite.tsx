@@ -121,11 +121,11 @@ export default function RoninProRseprite() {
     }
   }, [doc, activeFrameIndex])
 
-  const milestones = [
+  const milestones: string[] = [
     t('roninProRsepriteRoadmapM1'),
     t('roninProRsepriteRoadmapM2'),
     t('roninProRsepriteRoadmapM3'),
-  ] as const
+  ]
 
   return (
     <div style={{ width: '100%', maxWidth: 'min(calc(100vw - 48px), 1920px)' }}>

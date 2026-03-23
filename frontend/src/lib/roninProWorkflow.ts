@@ -496,6 +496,7 @@ export type ExecutionOrderError =
   | 'DISCONNECTED'
 
 export type DagGraphError =
+  | 'MULTIPLE_OUTPUT'
   | 'CYCLE'
   | 'DOUBLE_BG_INCOMPLETE'
   | 'DOUBLE_BG_PORTS'

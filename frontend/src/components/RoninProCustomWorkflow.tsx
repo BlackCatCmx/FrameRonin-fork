@@ -33,7 +33,6 @@ import {
 import StashDropZone from './StashDropZone'
 import WorkflowBlueprintCanvas, {
   BLUEPRINT_INPUT_IMAGE_NODE_WIDTH,
-  BLUEPRINT_NODE_WIDTH,
   BLUEPRINT_WORLD_W,
   type BlueprintToolPlaceAction,
   getBlueprintNodeWidth,
