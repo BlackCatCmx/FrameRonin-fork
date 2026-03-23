@@ -88,6 +88,7 @@ const NODE_LABEL_I18N: Record<WorkflowNodeType, string> = {
   padExpand: 'roninProWorkflowNode_padExpand',
   evenSplitStrip: 'roninProWorkflowNode_evenSplitStrip',
   mergeStrip: 'roninProWorkflowNode_mergeStrip',
+  simpleStitchVertical: 'roninProWorkflowNode_simpleStitchVertical',
   gridDeleteRow: 'roninProWorkflowNode_gridDeleteRow',
   gridDeleteCol: 'roninProWorkflowNode_gridDeleteCol',
   gridExpandRow: 'roninProWorkflowNode_gridExpandRow',
@@ -366,7 +367,10 @@ export default function RoninProCustomWorkflow({ onSendToFineProcess }: RoninPro
           : 1
         const refFile = fileItems[idx1 - 1]?.file ?? fileItems[0]!.file
         const base = refFile.name.replace(/\.[^.]+$/, '')
-        out.push({ name: `${base}_workflow_doublebg.png`, url })
+        const dagSuffix = strategy.topo.some((x) => x.type === 'matteDoubleBackground')
+          ? '_workflow_doublebg.png'
+          : '_workflow.png'
+        out.push({ name: `${base}${dagSuffix}`, url })
       }
       setResults(out)
       message.success(t('roninProWorkflowDone'))
@@ -749,6 +753,8 @@ export default function RoninProCustomWorkflow({ onSendToFineProcess }: RoninPro
               </div>
             </Space>
           )
+        case 'simpleStitchVertical':
+          return <Text style={{ color: '#8b93a5', fontSize: 11 }}>{t('roninProWorkflowSimpleStitchVerticalHint')}</Text>
         case 'gridDeleteRow':
         case 'gridDeleteCol':
         case 'gridExpandRow':

@@ -27,6 +27,7 @@ export const locales: Record<Lang, Record<string, string>> = {
     moduleNanobananaRpgmaker: 'RpgMaker角色生成',
     moduleNanobananaRpgmakerGemV1: 'V1',
     moduleNanobananaRpgmakerGemV1_1: 'V1.1',
+    moduleNanobananaRpgmakerGemV3: 'V3',
     moduleImage: '像素图片处理',
     moduleImageDesc: '对单张图片进行缩放与内描边',
     moduleGemV2: 'nanobanana预设像素角色生成器V2-V3',
@@ -228,7 +229,8 @@ export const locales: Record<Lang, Record<string, string>> = {
     roninProWorkflowGraphErr_NESTED_INPUT_IMAGE: '一条链上不能串联多个「输入图」节点；请只保留链首一个输入图。',
     roninProWorkflowGraphErr_DOUBLE_BG_INCOMPLETE: '「双背景抠图」需要两条输入线，分别接到上（黑底）、下（白底）输入口。',
     roninProWorkflowGraphErr_DOUBLE_BG_PORTS: '「双背景抠图」的两条输入必须各占一个口：上=黑底(inA)、下=白底(inB)，不可重复或缺失端口标记。',
-    roninProWorkflowGraphErr_INVALID_MULTI_INPUT: '除「双背景抠图」外，每个节点最多一条输入连线。',
+    roninProWorkflowGraphErr_INVALID_MULTI_INPUT: '除「双背景抠图」「简易上下拼接」外，每个节点最多一条输入连线。',
+    roninProWorkflowGraphErr_STITCH_VERTICAL_NO_INPUT: '「简易上下拼接」至少需一条输入连线。',
     roninProWorkflowGraphErr_INVALID_TARGET_PORT: '普通节点不能使用双输入端口；请删除该连线后重连到单色输入口。',
     roninProWorkflowGraphErr_NO_SINK: '流程必须有一个最终输出节点（没有连出线的节点）。',
     roninProWorkflowGraphErr_MULTIPLE_SINKS: '只能有一个最终输出节点；请将其余支路合并或只保留一条输出链。',
@@ -286,6 +288,9 @@ export const locales: Record<Lang, Record<string, string>> = {
     roninProWorkflowNode_padExpand: '透明扩边',
     roninProWorkflowNode_evenSplitStrip: '平分裁切（横条）',
     roninProWorkflowNode_mergeStrip: '合并图集',
+    roninProWorkflowNode_simpleStitchVertical: '简易上下拼接',
+    roninProWorkflowSimpleStitchVerticalHint:
+      '与「简易拼接」上下模式相同：多路输入可连到同一入口，自上而下拼接；叠放顺序按上游节点在画布上靠上、靠左优先。',
     roninProWorkflowNode_gridDeleteRow: '删行（格子）',
     roninProWorkflowNode_gridDeleteCol: '删列（格子）',
     roninProWorkflowNode_gridExpandRow: '扩行（插入一行高透明带）',
@@ -865,6 +870,9 @@ export const locales: Record<Lang, Record<string, string>> = {
     moduleVideo: 'Video to Frames',
     moduleVideoDesc: 'Extract frames, matte, Sprite Sheet',
     moduleNanobananaRpgmaker: 'RpgMaker Character Gen',
+    moduleNanobananaRpgmakerGemV1: 'V1',
+    moduleNanobananaRpgmakerGemV1_1: 'V1.1',
+    moduleNanobananaRpgmakerGemV3: 'V3',
     moduleImage: 'Pixel Image Processing',
     moduleImageDesc: 'Resize and add inner stroke to a single image',
     moduleGemV2: 'nanobanana Pixel Character Generator V2-V3',
@@ -1070,7 +1078,8 @@ export const locales: Record<Lang, Record<string, string>> = {
       'Double-background matte needs two wires: top pin = black-background branch, bottom = white-background branch.',
     roninProWorkflowGraphErr_DOUBLE_BG_PORTS:
       'Double-background matte: one wire to inA (black) and one to inB (white); ports must not duplicate or be missing.',
-    roninProWorkflowGraphErr_INVALID_MULTI_INPUT: 'Each node may have at most one incoming wire (except double-background matte).',
+    roninProWorkflowGraphErr_INVALID_MULTI_INPUT: 'Each node may have at most one incoming wire (except double-background matte and simple vertical stitch).',
+    roninProWorkflowGraphErr_STITCH_VERTICAL_NO_INPUT: 'Simple vertical stitch needs at least one incoming wire.',
     roninProWorkflowGraphErr_INVALID_TARGET_PORT:
       'Only the double-background node uses inA/inB ports — reconnect to a normal input pin.',
     roninProWorkflowGraphErr_NO_SINK: 'The graph must have exactly one final output node (no outgoing wire).',
@@ -1130,6 +1139,9 @@ export const locales: Record<Lang, Record<string, string>> = {
     roninProWorkflowNode_padExpand: 'Pad transparent edges',
     roninProWorkflowNode_evenSplitStrip: 'Even split → horizontal strip',
     roninProWorkflowNode_mergeStrip: 'Merge strip to atlas',
+    roninProWorkflowNode_simpleStitchVertical: 'Simple vertical stitch',
+    roninProWorkflowSimpleStitchVerticalHint:
+      'Same as Simple Stitch (vertical): multiple wires to one input; stack top to bottom. Order: upstream nodes higher on canvas first, then left.',
     roninProWorkflowNode_gridDeleteRow: 'Delete grid row',
     roninProWorkflowNode_gridDeleteCol: 'Delete grid column',
     roninProWorkflowNode_gridExpandRow: 'Expand row (one row-height gap)',
@@ -1700,6 +1712,7 @@ export const locales: Record<Lang, Record<string, string>> = {
     moduleNanobananaRpgmaker: 'RpgMakerキャラ生成',
     moduleNanobananaRpgmakerGemV1: 'V1',
     moduleNanobananaRpgmakerGemV1_1: 'V1.1',
+    moduleNanobananaRpgmakerGemV3: 'V3',
     moduleImage: 'ピクセル画像処理',
     moduleImageDesc: '単一画像の縮小・内側ストローク',
     moduleGemV2: 'nanobanana プリセットピクセルキャラ生成器 V2-V3',
@@ -1906,7 +1919,8 @@ export const locales: Record<Lang, Record<string, string>> = {
     roninProWorkflowGraphErr_DOUBLE_BG_PORTS:
       '「二重背景マット」は inA（黒）と inB（白）に1本ずつ。ポートの重複・未指定は不可です。',
     roninProWorkflowGraphErr_INVALID_MULTI_INPUT:
-      '「二重背景マット」以外のノードへの入力線は1本までです。',
+      '「二重背景マット」「簡易上下連結」以外のノードへの入力線は1本までです。',
+    roninProWorkflowGraphErr_STITCH_VERTICAL_NO_INPUT: '「簡易上下連結」には少なくとも1本の入力線が必要です。',
     roninProWorkflowGraphErr_INVALID_TARGET_PORT:
       '通常ノードに inA/inB は使えません。線を外して通常の入力に接続してください。',
     roninProWorkflowGraphErr_NO_SINK: '最終出力ノード（出力線のないノード）が1つ必要です。',
@@ -1966,6 +1980,9 @@ export const locales: Record<Lang, Record<string, string>> = {
     roninProWorkflowNode_padExpand: '透明パディング',
     roninProWorkflowNode_evenSplitStrip: '均等分割→横ストリップ',
     roninProWorkflowNode_mergeStrip: 'ストリップをアトラス結合',
+    roninProWorkflowNode_simpleStitchVertical: '簡易上下連結',
+    roninProWorkflowSimpleStitchVerticalHint:
+      '「簡易連結」の上下と同じ：複数入力を同一入口に接続し上から下へ。順序は上流ノードのキャンバス位置（上→下、左→右）基準。',
     roninProWorkflowNode_gridDeleteRow: '行削除（格子）',
     roninProWorkflowNode_gridDeleteCol: '列削除（格子）',
     roninProWorkflowNode_gridExpandRow: '行拡張（1行分の高さの透明帯）',

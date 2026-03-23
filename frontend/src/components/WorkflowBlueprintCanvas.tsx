@@ -222,6 +222,8 @@ export default function WorkflowBlueprintCanvas({
             let next = prev.filter((ed) => ed.source !== sid)
             if (tPort === 'inA' || tPort === 'inB') {
               next = next.filter((ed) => !(ed.target === tid && ed.targetPort === tPort))
+            } else if (best.n.type === 'simpleStitchVertical') {
+              next = next.filter((ed) => !(ed.source === sid && ed.target === tid))
             } else {
               next = next.filter((ed) => ed.target !== tid)
             }

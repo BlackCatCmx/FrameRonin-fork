@@ -29,6 +29,7 @@ import {
   doubleBackgroundMatteFromBlobs,
   postProcessDoubleBgMatteBlob,
 } from './doubleBackgroundMatte'
+import { stitchVerticalImageBlobs } from './simpleStitchVertical'
 
 export const RONIN_PRO_WORKFLOW_VERSION = 1
 
@@ -49,6 +50,8 @@ export type WorkflowNodeType =
   | 'padExpand'
   | 'evenSplitStrip'
   | 'mergeStrip'
+  /** 简易上下拼接：可多路输入连到同一输入点，自上而下拼接（与 GIF 工具简易拼接一致） */
+  | 'simpleStitchVertical'
   | 'gridDeleteRow'
   | 'gridDeleteCol'
   | 'gridExpandRow'
@@ -115,6 +118,7 @@ export const WORKFLOW_PALETTE: { type: WorkflowNodeType; defaultParams: Record<s
   { type: 'padExpand', defaultParams: { padTop: 0, padRight: 0, padBottom: 0, padLeft: 0 } },
   { type: 'evenSplitStrip', defaultParams: { evenCols: 4, evenRows: 4 } },
   { type: 'mergeStrip', defaultParams: { mergeCols: 4, frameCount: 16 } },
+  { type: 'simpleStitchVertical', defaultParams: {} },
   {
     type: 'gridDeleteRow',
     defaultParams: { gCols: 4, gRows: 4, rowIndex: 1 },
@@ -277,6 +281,27 @@ async function blobToDataUrl(blob: Blob): Promise<string> {
   })
 }
 
+/** 多路汇入「简易上下拼接」时，按上游节点画布位置排序：靠上、靠左优先（与视觉顺序一致） */
+function orderIncomingEdgesForVerticalStitch(
+  targetId: string,
+  edges: WorkflowEdge[],
+  allNodes: WorkflowNode[]
+): WorkflowEdge[] {
+  const byId = new Map(allNodes.map((n) => [n.id, n]))
+  const list = edges.filter((e) => e.target === targetId && e.targetPort == null)
+  return [...list].sort((ea, eb) => {
+    const na = byId.get(ea.source) as GraphNode | undefined
+    const nb = byId.get(eb.source) as GraphNode | undefined
+    const ya = na?.y ?? 0
+    const yb = nb?.y ?? 0
+    if (ya !== yb) return ya - yb
+    const xa = na?.x ?? 0
+    const xb = nb?.x ?? 0
+    if (xa !== xb) return xa - xb
+    return ea.source.localeCompare(eb.source)
+  })
+}
+
 async function runOneStep(blob: Blob, node: WorkflowNode): Promise<Blob> {
   const p = node.params
   switch (node.type) {
@@ -402,6 +427,7 @@ async function runOneStep(blob: Blob, node: WorkflowNode): Promise<Blob> {
     case 'workflowInputImage':
       return blob
     case 'matteDoubleBackground':
+    case 'simpleStitchVertical':
       return blob
     default:
       return blob
@@ -411,7 +437,8 @@ async function runOneStep(blob: Blob, node: WorkflowNode): Promise<Blob> {
 async function executeDagNode(
   n: WorkflowNode,
   edges: WorkflowEdge[],
-  blobMap: Map<string, Blob>
+  blobMap: Map<string, Blob>,
+  allNodes: WorkflowNode[]
 ): Promise<Blob> {
   if (n.type === 'workflowInputImage') {
     const b = blobMap.get(n.id)
@@ -429,6 +456,13 @@ async function executeDagNode(
     const tolerance = Math.min(100, Math.max(0, Math.round(p.tolerance ?? 70)))
     const edgeContrast = Math.min(100, Math.max(0, Math.round(p.edgeContrast ?? 53)))
     return doubleBackgroundMatteFromBlobs(ba, bb, tolerance, edgeContrast)
+  }
+  if (n.type === 'simpleStitchVertical') {
+    const ordered = orderIncomingEdgesForVerticalStitch(n.id, edges, allNodes)
+    if (ordered.length === 0) throw new Error('DAG_STITCH_VERTICAL_NO_IN')
+    const blobs = ordered.map((e) => blobMap.get(e.source)).filter((b): b is Blob => !!b)
+    if (blobs.length !== ordered.length) throw new Error('DAG_STITCH_VERTICAL_BLOBS')
+    return stitchVerticalImageBlobs(blobs)
   }
   const inc = edges.filter((e) => e.target === n.id && e.targetPort == null)
   if (inc.length === 1) {
@@ -459,7 +493,7 @@ export async function runDagExecution(
     blobMap.set(h.id, await getHeadBlob(h))
   }
   for (const n of topo) {
-    const out = await executeDagNode(n, edges, blobMap)
+    const out = await executeDagNode(n, edges, blobMap, topo)
     blobMap.set(n.id, out)
   }
   const finalB = blobMap.get(sinkId)
@@ -523,6 +557,7 @@ export type DagGraphError =
   | 'DISCONNECTED_DAG'
   | 'INPUT_IMAGE_NOT_HEAD'
   | 'TARGETED_HEAD_MIX'
+  | 'STITCH_VERTICAL_NO_INPUT'
 
 /** 校验含双输入节点的 DAG：单出、双入端口、唯一汇点、可达、拓扑序 */
 export function validateDagWorkflow(
@@ -559,6 +594,11 @@ export function validateDagWorkflow(
         return { ok: false, reason: 'DOUBLE_BG_PORTS' }
       }
       if (new Set(ports).size !== 2) return { ok: false, reason: 'DOUBLE_BG_PORTS' }
+    } else if (n.type === 'simpleStitchVertical') {
+      if (ins.length < 1) return { ok: false, reason: 'STITCH_VERTICAL_NO_INPUT' }
+      for (const e of ins) {
+        if (e.targetPort != null) return { ok: false, reason: 'INVALID_TARGET_PORT' }
+      }
     } else {
       if (ins.length > 1) return { ok: false, reason: 'INVALID_MULTI_INPUT' }
       for (const e of ins) {
@@ -617,7 +657,7 @@ export function validateDagWorkflow(
 }
 
 export function graphNeedsDagExecution(nodes: GraphNode[], edges: WorkflowEdge[]): boolean {
-  if (nodes.some((n) => n.type === 'matteDoubleBackground')) return true
+  if (nodes.some((n) => n.type === 'matteDoubleBackground' || n.type === 'simpleStitchVertical')) return true
   return edges.some((e) => e.targetPort != null)
 }
 
@@ -795,6 +835,7 @@ const VALID_TYPES = new Set<WorkflowNodeType>([
   'padExpand',
   'evenSplitStrip',
   'mergeStrip',
+  'simpleStitchVertical',
   'gridDeleteRow',
   'gridDeleteCol',
   'gridExpandRow',
