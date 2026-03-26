@@ -32,7 +32,7 @@ import {
   type WorkflowEdge,
   type WorkflowNodeType,
 } from '../lib/roninProWorkflow'
-import { WORKFLOW_FINISHED_PRESETS } from '../lib/roninProWorkflowFinishedPresets'
+import { WORKFLOW_BPSET_PRESETS } from '../lib/workflowBpsetPresets'
 import StashDropZone from './StashDropZone'
 import WorkflowBlueprintCanvas, {
   BLUEPRINT_INPUT_IMAGE_NODE_WIDTH,
@@ -146,6 +146,7 @@ export default function RoninProCustomWorkflow({ onSendToFineProcess }: RoninPro
   /** 导出预设名：写入 JSON 的 presetName，并用于下载文件名 */
   const [presetName, setPresetName] = useState('')
   const [finishedPresetsOpen, setFinishedPresetsOpen] = useState(false)
+  const [bpsetLoadingId, setBpsetLoadingId] = useState<string | null>(null)
 
   useEffect(() => {
     return () => {
@@ -442,6 +443,20 @@ export default function RoninProCustomWorkflow({ onSendToFineProcess }: RoninPro
       message.success(t('roninProWorkflowLoadSuccess'))
     } catch {
       message.error(t('roninProWorkflowLoadFailed'))
+    }
+  }
+
+  const loadBpsetPreset = async (presetId: string, url: string) => {
+    setBpsetLoadingId(presetId)
+    try {
+      const res = await fetch(url)
+      if (!res.ok) throw new Error(String(res.status))
+      const json = await res.text()
+      applyFinishedPresetJson(json)
+    } catch {
+      message.error(t('roninProWorkflowBpsetLoadFailed'))
+    } finally {
+      setBpsetLoadingId(null)
     }
   }
 
@@ -1226,8 +1241,12 @@ export default function RoninProCustomWorkflow({ onSendToFineProcess }: RoninPro
         </Space>
         {finishedPresetsOpen && (
           <Space wrap style={{ marginTop: 8 }}>
-            {WORKFLOW_FINISHED_PRESETS.map((p) => (
-              <Button key={p.id} onClick={() => applyFinishedPresetJson(p.json)}>
+            {WORKFLOW_BPSET_PRESETS.map((p) => (
+              <Button
+                key={p.id}
+                loading={bpsetLoadingId === p.id}
+                onClick={() => void loadBpsetPreset(p.id, p.url)}
+              >
                 {t(p.labelKey)}
               </Button>
             ))}

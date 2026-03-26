@@ -1,0 +1,64 @@
+{
+  "version": 5,
+  "nodes": [
+    {
+      "id": "22b1bdb3-fa20-4b70-b466-3685f0249120",
+      "type": "geminiWatermarkRemove",
+      "params": {},
+      "x": 21.176470588235276,
+      "y": 54.117647058823536
+    },
+    {
+      "id": "af51be38-35b9-4c48-bd2d-a51439b8f96b",
+      "type": "resize",
+      "params": {
+        "w": 256,
+        "h": 256,
+        "keepAspect": 1,
+        "pixelated": 1
+      },
+      "x": 49.411764705882334,
+      "y": 205.88235294117646
+    },
+    {
+      "id": "833b901f-0c8e-40ea-9708-e631cdbbab92",
+      "type": "crop",
+      "params": {
+        "left": 0,
+        "top": 0,
+        "right": 4,
+        "bottom": 1
+      },
+      "x": 430.5882352941176,
+      "y": 208.23529411764704
+    },
+    {
+      "id": "31a794d4-30b7-477e-ab6d-b87f0440ae39",
+      "type": "matteContiguous",
+      "params": {
+        "tolerance": 80,
+        "feather": 5
+      },
+      "x": 357.5293918332432,
+      "y": 440.47059622107923
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-22b1bdb3-fa20-4b70-b466-3685f0249120-af51be38-35b9-4c48-bd2d-a51439b8f96b-in-1774246613144",
+      "source": "22b1bdb3-fa20-4b70-b466-3685f0249120",
+      "target": "af51be38-35b9-4c48-bd2d-a51439b8f96b"
+    },
+    {
+      "id": "e-af51be38-35b9-4c48-bd2d-a51439b8f96b-833b901f-0c8e-40ea-9708-e631cdbbab92-in-1774246618174",
+      "source": "af51be38-35b9-4c48-bd2d-a51439b8f96b",
+      "target": "833b901f-0c8e-40ea-9708-e631cdbbab92"
+    },
+    {
+      "id": "e-833b901f-0c8e-40ea-9708-e631cdbbab92-31a794d4-30b7-477e-ab6d-b87f0440ae39-in-1774246629605",
+      "source": "833b901f-0c8e-40ea-9708-e631cdbbab92",
+      "target": "31a794d4-30b7-477e-ab6d-b87f0440ae39"
+    }
+  ],
+  "presetName": "鸟类"
+}

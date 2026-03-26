@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 import { Card, Row, Col, Typography, Space, Button } from 'antd'
-import { ArrowsAltOutlined, BlockOutlined, FileImageOutlined, PictureOutlined, VideoCameraOutlined, ThunderboltOutlined, BorderOuterOutlined, ScissorOutlined, SafetyOutlined, ShareAltOutlined, ControlOutlined, RocketOutlined } from '@ant-design/icons'
+import { ArrowsAltOutlined, BlockOutlined, BugOutlined, FileImageOutlined, PictureOutlined, VideoCameraOutlined, ThunderboltOutlined, BorderOuterOutlined, ScissorOutlined, SafetyOutlined, ShareAltOutlined, ControlOutlined, RocketOutlined } from '@ant-design/icons'
 import { useAuth } from '../auth/context'
 import { RONIN_PRO_REQUIRE_NFT } from '../config/features'
 import { useNftOwnership } from '../hooks/useNftOwnership'
@@ -72,7 +72,24 @@ const GEM_RPGMAKER_URL_V1 = 'https://gemini.google.com/gem/1zkDfsN972fczP66xwCiQ
 const GEM_RPGMAKER_URL_V1_1 = 'https://gemini.google.com/gem/1kUViEEO8ehmIHGNHThI77xpzSXx2KHFb?usp=sharing'
 const GEM_RPGMAKER_URL_V3 = 'https://gemini.google.com/gem/1b5w2r0-kmMAtMhuGloKxJWuxULoMm177?usp=sharing'
 
-export type AppMode = 'video' | 'image' | 'gif' | 'spritesheet' | 'spriteadjust' | 'pixelate' | 'expandshrink' | 'matte' | 'geminiwatermark' | 'nanobananaFullChar' | 'seedanceWatermark' | 'assetsAndSource' | 'controlTest' | 'controlTestArcade' | 'roninPro' | null
+export type AppMode =
+  | 'video'
+  | 'image'
+  | 'gif'
+  | 'spritesheet'
+  | 'spriteadjust'
+  | 'pixelate'
+  | 'expandshrink'
+  | 'matte'
+  | 'geminiwatermark'
+  | 'nanobananaFullChar'
+  | 'seedanceWatermark'
+  | 'assetsAndSource'
+  | 'controlTest'
+  | 'controlTestArcade'
+  | 'roninPro'
+  | 'aiPixelAnimals'
+  | null
 
 interface Props {
   onSelect: (mode: AppMode) => void
@@ -555,6 +572,30 @@ export default function ModeSelector({ onSelect }: Props) {
           </Col>
         </Row>
       )}
+      <Row gutter={24} style={{ marginTop: 8, marginBottom: 24 }}>
+        <Col xs={24}>
+          <Card
+            hoverable
+            onClick={() => onSelect('aiPixelAnimals')}
+            styles={{ body: HOME_CARD_BODY_LARGE }}
+            style={{
+              textAlign: 'center',
+              cursor: 'pointer',
+              borderColor: '#9a8b78',
+              background: 'linear-gradient(135deg, #ede6dc 0%, #e8dfd4 100%)',
+              borderWidth: 2,
+            }}
+          >
+            <BugOutlined style={{ fontSize: 36, color: '#b55233', marginBottom: 12, display: 'block' }} />
+            <div style={{ lineHeight: 1.4 }}>
+              <Text strong style={{ fontSize: 15 }}>{t('moduleAiPixelAnimals')}</Text>
+            </div>
+            <Text type="secondary" style={{ display: 'block', marginTop: 4, fontSize: 12, lineHeight: 1.4, ...HOME_DESC_TEXT }}>
+              {t('moduleAiPixelAnimalsDesc')}
+            </Text>
+          </Card>
+        </Col>
+      </Row>
       <Row gutter={24} style={{ marginTop: 8, marginBottom: 24 }}>
         <Col xs={24} md={12}>
           <Card

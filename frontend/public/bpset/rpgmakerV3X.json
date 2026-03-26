@@ -1,0 +1,235 @@
+{
+  "version": 5,
+  "nodes": [
+    {
+      "id": "2dab39a0-6cab-4607-a408-6913accfaac4",
+      "type": "geminiWatermarkRemove",
+      "params": {},
+      "x": 27.058823529411768,
+      "y": 47.05882352941177
+    },
+    {
+      "id": "7ca7f41c-08a6-4542-8194-e7980207a7e1",
+      "type": "resize",
+      "params": {
+        "w": 256,
+        "h": 256,
+        "keepAspect": 1,
+        "pixelated": 1
+      },
+      "x": 265.88235294117646,
+      "y": 145.88235294117646
+    },
+    {
+      "id": "56b2c60f-169a-425a-913d-756e9d05be41",
+      "type": "matteContiguous",
+      "params": {
+        "tolerance": 80,
+        "feather": 5
+      },
+      "x": 345.8823529411764,
+      "y": 25.882352941176464
+    },
+    {
+      "id": "815c77bc-eea1-406c-88d8-927a4c900540",
+      "type": "customGridRearrange",
+      "params": {
+        "splitCols": 4,
+        "splitRows": 4,
+        "outRows": 3,
+        "outCols": 9
+      },
+      "x": 365.8823529411763,
+      "y": 42.35294117647056,
+      "rearrangeGrid": [
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          5,
+          6,
+          6,
+          6
+        ],
+        [
+          7,
+          7,
+          7,
+          4,
+          8,
+          8,
+          9,
+          10,
+          11
+        ],
+        [
+          12,
+          13,
+          12,
+          13,
+          15,
+          15,
+          16,
+          16,
+          16
+        ]
+      ]
+    },
+    {
+      "id": "c5840699-b144-494f-9ea7-153fa19809f1",
+      "type": "workflowInputImage",
+      "params": {
+        "imageIndex": 1
+      },
+      "x": 55.41176470588209,
+      "y": 78.82352941176467
+    },
+    {
+      "id": "9ba8e33e-ce61-4410-9f6f-f63e332d5fdf",
+      "type": "workflowInputImage",
+      "params": {
+        "imageIndex": 2
+      },
+      "x": 72.3529411764704,
+      "y": 358.8235294117647
+    },
+    {
+      "id": "f6cc490a-76ae-4f7e-92c5-eba120b02c41",
+      "type": "geminiWatermarkRemove",
+      "params": {},
+      "x": 299.8823529411763,
+      "y": 417.6470588235294
+    },
+    {
+      "id": "fa737259-1bd4-42a8-89fa-4d048b5e782a",
+      "type": "resize",
+      "params": {
+        "w": 256,
+        "h": 256,
+        "keepAspect": 1,
+        "pixelated": 1
+      },
+      "x": 52.82352941176447,
+      "y": 442.3529411764706
+    },
+    {
+      "id": "9b8744bd-36b9-451d-85df-9f9f7e59f781",
+      "type": "matteContiguous",
+      "params": {
+        "tolerance": 80,
+        "feather": 5
+      },
+      "x": 217.52941176470569,
+      "y": 447.05882352941177
+    },
+    {
+      "id": "a48efcbc-e168-4cc2-b7d6-a585165aab05",
+      "type": "customGridRearrange",
+      "params": {
+        "splitCols": 4,
+        "splitRows": 4,
+        "outRows": 3,
+        "outCols": 9
+      },
+      "x": 125.7647058823527,
+      "y": 201.1764705882353,
+      "rearrangeGrid": [
+        [
+          5,
+          5,
+          5,
+          5,
+          6,
+          6,
+          7,
+          7,
+          7
+        ],
+        [
+          8,
+          8,
+          8,
+          9,
+          10,
+          10,
+          11,
+          11,
+          11
+        ],
+        [
+          12,
+          12,
+          12,
+          13,
+          14,
+          14,
+          15,
+          15,
+          15
+        ]
+      ]
+    },
+    {
+      "id": "e6eb5cef-c3c4-4213-bc1f-69a32366dbc6",
+      "type": "simpleStitchVertical",
+      "params": {},
+      "x": 742.3529411764704,
+      "y": 152.94117647058832
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-2dab39a0-6cab-4607-a408-6913accfaac4-7ca7f41c-08a6-4542-8194-e7980207a7e1-in-1774266523468",
+      "source": "2dab39a0-6cab-4607-a408-6913accfaac4",
+      "target": "7ca7f41c-08a6-4542-8194-e7980207a7e1"
+    },
+    {
+      "id": "e-7ca7f41c-08a6-4542-8194-e7980207a7e1-56b2c60f-169a-425a-913d-756e9d05be41-in-1774266524928",
+      "source": "7ca7f41c-08a6-4542-8194-e7980207a7e1",
+      "target": "56b2c60f-169a-425a-913d-756e9d05be41"
+    },
+    {
+      "id": "e-56b2c60f-169a-425a-913d-756e9d05be41-815c77bc-eea1-406c-88d8-927a4c900540-in-1774266761559",
+      "source": "56b2c60f-169a-425a-913d-756e9d05be41",
+      "target": "815c77bc-eea1-406c-88d8-927a4c900540"
+    },
+    {
+      "id": "e-c5840699-b144-494f-9ea7-153fa19809f1-2dab39a0-6cab-4607-a408-6913accfaac4-in-1774268017492",
+      "source": "c5840699-b144-494f-9ea7-153fa19809f1",
+      "target": "2dab39a0-6cab-4607-a408-6913accfaac4"
+    },
+    {
+      "id": "e-9ba8e33e-ce61-4410-9f6f-f63e332d5fdf-f6cc490a-76ae-4f7e-92c5-eba120b02c41-in-1774268027422",
+      "source": "9ba8e33e-ce61-4410-9f6f-f63e332d5fdf",
+      "target": "f6cc490a-76ae-4f7e-92c5-eba120b02c41"
+    },
+    {
+      "id": "e-f6cc490a-76ae-4f7e-92c5-eba120b02c41-fa737259-1bd4-42a8-89fa-4d048b5e782a-in-1774268031052",
+      "source": "f6cc490a-76ae-4f7e-92c5-eba120b02c41",
+      "target": "fa737259-1bd4-42a8-89fa-4d048b5e782a"
+    },
+    {
+      "id": "e-fa737259-1bd4-42a8-89fa-4d048b5e782a-9b8744bd-36b9-451d-85df-9f9f7e59f781-in-1774268044462",
+      "source": "fa737259-1bd4-42a8-89fa-4d048b5e782a",
+      "target": "9b8744bd-36b9-451d-85df-9f9f7e59f781"
+    },
+    {
+      "id": "e-9b8744bd-36b9-451d-85df-9f9f7e59f781-a48efcbc-e168-4cc2-b7d6-a585165aab05-in-1774268050031",
+      "source": "9b8744bd-36b9-451d-85df-9f9f7e59f781",
+      "target": "a48efcbc-e168-4cc2-b7d6-a585165aab05"
+    },
+    {
+      "id": "e-815c77bc-eea1-406c-88d8-927a4c900540-e6eb5cef-c3c4-4213-bc1f-69a32366dbc6-in-1774269700262",
+      "source": "815c77bc-eea1-406c-88d8-927a4c900540",
+      "target": "e6eb5cef-c3c4-4213-bc1f-69a32366dbc6"
+    },
+    {
+      "id": "e-a48efcbc-e168-4cc2-b7d6-a585165aab05-e6eb5cef-c3c4-4213-bc1f-69a32366dbc6-in-1774269703122",
+      "source": "a48efcbc-e168-4cc2-b7d6-a585165aab05",
+      "target": "e6eb5cef-c3c4-4213-bc1f-69a32366dbc6"
+    }
+  ],
+  "presetName": "rpgmakerV3X"
+}

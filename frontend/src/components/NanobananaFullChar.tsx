@@ -8,6 +8,7 @@ const GEM_HORIZONTAL_CHAR_URL = 'https://gemini.google.com/gem/10LatqlJGxea-I-JC
 const GEM_8DIR_TOPDOWN_URL = 'https://gemini.google.com/gem/1Xr3TdyAOLugE19v5poA4LpJSfVT4Drox?usp=sharing'
 const GEM_HORSE_RIDING_URL = 'https://gemini.google.com/gem/1n--WxKek4kEZO_gqQeab-u5b3mO-qyl1?usp=sharing'
 const GEM_ONE_IMAGE_ALL_ACTIONS_URL = 'https://gemini.google.com/gem/1pmNojUIGsB1j5gpEwJIKziyKc-XWM5RP?usp=sharing'
+const GEM_ONE_IMAGE_ALL_ACTIONS_2_URL = 'https://gemini.google.com/gem/1JV-B4NS1-LQlqXIMrbtM5kq70hxCcCr2?usp=sharing'
 
 const HORIZONTAL_CHAR_GIFS = ['h2s1 (1).gif', 'h2s1 (2).gif', 'h2s1 (3).gif', 'h2s1 (4).gif', 'h2s1 (5).gif']
 const D8S_TOPDOWN_GIFS = ['d8s (1).gif', 'd8s (2).gif', 'd8s (3).gif', 'd8s (4).gif', 'd8s (5).gif']
@@ -15,6 +16,13 @@ const D8S_TOPDOWN_GIFS = ['d8s (1).gif', 'd8s (2).gif', 'd8s (3).gif', 'd8s (4).
 const V4TX3_GIFS = ['A2M_row1.gif', 'A2M_row3.gif', 'row_01.gif', 'row_02.gif', 'row_03.gif', 'row_04.gif', 'row_05.gif', 'jump.gif', 'attack.gif', 'spr.gif']
 
 const OTF_ALL_ACTIONS_GIFS = ['otf-1.gif', 'otf-2.gif', 'otf-3.gif', 'otf-4.gif', 'otf-5.gif', 'otf-6.gif']
+const OTF_ALL_ACTIONS_2_GIFS = [
+  'fullchar/qf2-1.gif',
+  'fullchar/qf2-2.gif',
+  'fullchar/qf2-3.gif',
+  'fullchar/qf2-4.gif',
+  'fullchar/qf2-5.gif',
+]
 
 export default function NanobananaFullChar() {
   const { t } = useLanguage()
@@ -103,6 +111,24 @@ export default function NanobananaFullChar() {
               style={{ width: '100%', aspectRatio: 1, objectFit: 'contain', imageRendering: 'pixelated', border: '1px solid rgba(0,0,0,0.1)' }}
             />
           ))}
+        </div>
+        <div style={{ marginTop: 12 }}>
+          <Button
+            type="primary"
+            onClick={() => window.open(GEM_ONE_IMAGE_ALL_ACTIONS_2_URL, '_blank')}
+          >
+            {t('nanobananaFullCharBtn6')}
+          </Button>
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${OTF_ALL_ACTIONS_2_GIFS.length}, 1fr)`, gap: 8, marginTop: 8, width: '100%' }}>
+            {OTF_ALL_ACTIONS_2_GIFS.map((name) => (
+              <img
+                key={name}
+                src={`${import.meta.env.BASE_URL}${name}`}
+                alt={name}
+                style={{ width: '100%', aspectRatio: 1, objectFit: 'contain', imageRendering: 'pixelated', border: '1px solid rgba(0,0,0,0.1)' }}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </>

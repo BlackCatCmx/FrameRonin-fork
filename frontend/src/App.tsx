@@ -26,6 +26,7 @@ import SeedanceWatermarkRemover from './components/SeedanceWatermarkRemover'
 import AssetsAndSourceShare from './components/AssetsAndSourceShare'
 import ControlTest from './components/ControlTest'
 import RoninPro from './components/RoninPro'
+import AiPixelAnimalsHub from './components/AiPixelAnimalsHub'
 
 const ImageMatte = lazy(() => import('./components/ImageMatte'))
 import ParamsStep from './components/ParamsStep'
@@ -466,6 +467,8 @@ function App() {
                 }}
               />
             </Card>
+          ) : mode === 'aiPixelAnimals' ? (
+            <AiPixelAnimalsHub onBack={() => setMode(null)} />
           ) : (
             <>
               <Steps

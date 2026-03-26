@@ -1,0 +1,64 @@
+{
+  "version": 6,
+  "nodes": [
+    {
+      "id": "1b159735-6060-407b-91f1-ba5056c2551e",
+      "type": "geminiWatermarkRemove",
+      "params": {},
+      "x": -21.176470588235304,
+      "y": 8.235294117647044
+    },
+    {
+      "id": "fa703731-a8e5-440a-b2fe-f7a727ce2dde",
+      "type": "resize",
+      "params": {
+        "w": 192,
+        "h": 192,
+        "keepAspect": 1,
+        "pixelated": 1
+      },
+      "x": -2.3529411764706083,
+      "y": 170.58823529411765
+    },
+    {
+      "id": "3bfb1f83-585a-4054-978d-e212290af09a",
+      "type": "matteContiguous",
+      "params": {
+        "tolerance": 80,
+        "feather": 5
+      },
+      "x": -1.1764705882353041,
+      "y": 430.5882352941177
+    },
+    {
+      "id": "0a07fca3-fbfa-4af6-a4ea-6dfabe85b37d",
+      "type": "crop",
+      "params": {
+        "left": 0,
+        "top": 2,
+        "right": 0,
+        "bottom": 0
+      },
+      "x": 312.9411764705882,
+      "y": 2.3529411764705515
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-1b159735-6060-407b-91f1-ba5056c2551e-fa703731-a8e5-440a-b2fe-f7a727ce2dde-in-1774399177094",
+      "source": "1b159735-6060-407b-91f1-ba5056c2551e",
+      "target": "fa703731-a8e5-440a-b2fe-f7a727ce2dde"
+    },
+    {
+      "id": "e-fa703731-a8e5-440a-b2fe-f7a727ce2dde-3bfb1f83-585a-4054-978d-e212290af09a-in-1774399186221",
+      "source": "fa703731-a8e5-440a-b2fe-f7a727ce2dde",
+      "target": "3bfb1f83-585a-4054-978d-e212290af09a"
+    },
+    {
+      "id": "e-3bfb1f83-585a-4054-978d-e212290af09a-0a07fca3-fbfa-4af6-a4ea-6dfabe85b37d-in-1774399194956",
+      "source": "3bfb1f83-585a-4054-978d-e212290af09a",
+      "target": "0a07fca3-fbfa-4af6-a4ea-6dfabe85b37d"
+    }
+  ],
+  "presetName": "八方向"
+}

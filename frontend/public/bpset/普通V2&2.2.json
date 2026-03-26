@@ -1,0 +1,47 @@
+{
+  "version": 6,
+  "nodes": [
+    {
+      "id": "fb5249ad-7935-4317-be6a-a04a8c41205b",
+      "type": "geminiWatermarkRemove",
+      "params": {},
+      "x": -82.35294117647061,
+      "y": 112.94117647058823
+    },
+    {
+      "id": "9fcba357-2bd6-42c4-9476-7dd0313e2cea",
+      "type": "resize",
+      "params": {
+        "w": 160,
+        "h": 160,
+        "keepAspect": 1,
+        "pixelated": 1
+      },
+      "x": -76.47058823529414,
+      "y": 250.58823529411765
+    },
+    {
+      "id": "c73210ed-33c7-466b-b538-997fcac83077",
+      "type": "matteContiguous",
+      "params": {
+        "tolerance": 80,
+        "feather": 5
+      },
+      "x": 248.23529411764702,
+      "y": 118.8235294117647
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-fb5249ad-7935-4317-be6a-a04a8c41205b-9fcba357-2bd6-42c4-9476-7dd0313e2cea-in-1774398857207",
+      "source": "fb5249ad-7935-4317-be6a-a04a8c41205b",
+      "target": "9fcba357-2bd6-42c4-9476-7dd0313e2cea"
+    },
+    {
+      "id": "e-9fcba357-2bd6-42c4-9476-7dd0313e2cea-c73210ed-33c7-466b-b538-997fcac83077-in-1774398865079",
+      "source": "9fcba357-2bd6-42c4-9476-7dd0313e2cea",
+      "target": "c73210ed-33c7-466b-b538-997fcac83077"
+    }
+  ],
+  "presetName": "普通V2&2.2"
+}

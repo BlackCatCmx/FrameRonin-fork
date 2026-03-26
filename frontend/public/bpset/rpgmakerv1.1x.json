@@ -1,0 +1,80 @@
+{
+  "version": 6,
+  "nodes": [
+    {
+      "id": "e55c52b3-f135-4eeb-93ba-9e1764d7730c",
+      "type": "geminiWatermarkRemove",
+      "params": {},
+      "x": 4.705882352941174,
+      "y": -23.529411764705884
+    },
+    {
+      "id": "a864d894-4fc0-4475-bb78-f19139f6691c",
+      "type": "matteContiguous",
+      "params": {
+        "tolerance": 80,
+        "feather": 5
+      },
+      "x": 308.235294117647,
+      "y": -25.882352941176485
+    },
+    {
+      "id": "240c1ea9-6391-4382-b06b-05eed4b96528",
+      "type": "resize",
+      "params": {
+        "w": 144,
+        "h": 144,
+        "keepAspect": 1,
+        "pixelated": 1
+      },
+      "x": 5.882352941176457,
+      "y": 88.23529411764704
+    },
+    {
+      "id": "618ce65d-97f9-4207-8a2d-caefe956b646",
+      "type": "gridCopyRow",
+      "params": {
+        "gCols": 3,
+        "gRows": 3,
+        "rowIndex": 2,
+        "atRow": 3
+      },
+      "x": 302.3529411764706,
+      "y": 161.17647058823525
+    },
+    {
+      "id": "7e26e444-b6bf-4936-8a0c-508cf7a6e0ef",
+      "type": "gridFlipRow",
+      "params": {
+        "gCols": 3,
+        "gRows": 4,
+        "rowIndex": 3
+      },
+      "x": 621.1764705882352,
+      "y": 157.64705882352936
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-e55c52b3-f135-4eeb-93ba-9e1764d7730c-240c1ea9-6391-4382-b06b-05eed4b96528-1774144430315",
+      "source": "e55c52b3-f135-4eeb-93ba-9e1764d7730c",
+      "target": "240c1ea9-6391-4382-b06b-05eed4b96528"
+    },
+    {
+      "id": "e-240c1ea9-6391-4382-b06b-05eed4b96528-a864d894-4fc0-4475-bb78-f19139f6691c-1774144433265",
+      "source": "240c1ea9-6391-4382-b06b-05eed4b96528",
+      "target": "a864d894-4fc0-4475-bb78-f19139f6691c"
+    },
+    {
+      "id": "e-a864d894-4fc0-4475-bb78-f19139f6691c-618ce65d-97f9-4207-8a2d-caefe956b646-1774144464954",
+      "source": "a864d894-4fc0-4475-bb78-f19139f6691c",
+      "target": "618ce65d-97f9-4207-8a2d-caefe956b646"
+    },
+    {
+      "id": "e-618ce65d-97f9-4207-8a2d-caefe956b646-7e26e444-b6bf-4936-8a0c-508cf7a6e0ef-1774144482135",
+      "source": "618ce65d-97f9-4207-8a2d-caefe956b646",
+      "target": "7e26e444-b6bf-4936-8a0c-508cf7a6e0ef"
+    }
+  ],
+  "presetName": "rpgmakerv1.1"
+}
