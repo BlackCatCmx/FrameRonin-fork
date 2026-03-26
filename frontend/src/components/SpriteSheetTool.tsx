@@ -558,7 +558,7 @@ export default function SpriteSheetTool() {
                     <Text strong style={{ display: 'block', marginTop: 24, marginBottom: 8 }}>{t('spriteToGifFrames')}</Text>
                     <Space wrap align="center" style={{ marginBottom: 8 }}>
                       <Text type="secondary">{t('spriteTogifFrameCols')}:</Text>
-                      <InputNumber min={1} max={16} value={togifFrameCols} onChange={(v) => setTogifFrameCols(v ?? 6)} style={{ width: 64 }} />
+                      <InputNumber min={1} max={128} value={togifFrameCols} onChange={(v) => setTogifFrameCols(v ?? 6)} style={{ width: 72 }} />
                     </Space>
                     <Text type="secondary" style={{ display: 'block', marginBottom: 8, fontSize: 12 }}>{t('spriteTogifFrameReorderHint')}</Text>
                     <div
