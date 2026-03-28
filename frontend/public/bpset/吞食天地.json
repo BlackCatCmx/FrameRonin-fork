@@ -1,0 +1,440 @@
+{
+  "version": 7,
+  "nodes": [
+    {
+      "id": "9f3c25fc-a5b0-4082-9929-ed3b48d7fada",
+      "type": "geminiWatermarkRemove",
+      "params": {},
+      "x": 47.05882352941177,
+      "y": 144.70588235294116
+    },
+    {
+      "id": "a6aaff8b-e665-4029-85b9-cd6438dd5fdd",
+      "type": "resize",
+      "params": {
+        "w": 128,
+        "h": 128,
+        "keepAspect": 1,
+        "pixelated": 1
+      },
+      "x": -162.3529411764706,
+      "y": 268.235294117647
+    },
+    {
+      "id": "43a27813-55ed-4d16-89f3-e7e7ea0fdf47",
+      "type": "gridDeleteRow",
+      "params": {
+        "gCols": 2,
+        "gRows": 2,
+        "rowIndex": 2
+      },
+      "x": 250.58823529411768,
+      "y": 322.3529411764705
+    },
+    {
+      "id": "f4d1454e-ca7a-4310-874a-bb7abf9f08b5",
+      "type": "gridDeleteCol",
+      "params": {
+        "gCols": 2,
+        "gRows": 1,
+        "colIndex": 2
+      },
+      "x": 457.64705882352945,
+      "y": 249.4117647058823
+    },
+    {
+      "id": "319a1c1e-e31e-4865-bab2-dde5b2b45c56",
+      "type": "gridDeleteCol",
+      "params": {
+        "gCols": 2,
+        "gRows": 1,
+        "colIndex": 2
+      },
+      "x": 535.2941176470589,
+      "y": 325.8823529411764
+    },
+    {
+      "id": "f8a99253-2168-418d-b5ca-7de1fb58f005",
+      "type": "gridDeleteRow",
+      "params": {
+        "gCols": 4,
+        "gRows": 4,
+        "rowIndex": 4
+      },
+      "x": 675.2941176470589,
+      "y": 329.41176470588226
+    },
+    {
+      "id": "085fb3da-4a64-41d0-8933-538e73f1f915",
+      "type": "gridCopyCol",
+      "params": {
+        "gCols": 2,
+        "gRows": 1,
+        "colIndex": 1,
+        "atCol": 3
+      },
+      "x": 805.8823529411766,
+      "y": 181.1764705882352
+    },
+    {
+      "id": "ec0058c2-7efd-406c-99d9-696f324f68a8",
+      "type": "resize",
+      "params": {
+        "w": 96,
+        "h": 96,
+        "keepAspect": 1,
+        "pixelated": 1
+      },
+      "x": 1085.8823529411766,
+      "y": 181.1764705882352
+    },
+    {
+      "id": "136a798a-6686-4823-b7d7-2488335bc097",
+      "type": "matteGlobal",
+      "params": {
+        "tolerance": 80,
+        "feather": 5
+      },
+      "x": -56.47058823529403,
+      "y": 394.1176470588234
+    },
+    {
+      "id": "99b2cf90-016e-445c-b55a-e9785ccefa02",
+      "type": "workflowInputImage",
+      "params": {
+        "imageIndex": 1
+      },
+      "x": -202.3529411764705,
+      "y": 29.411764705882206
+    },
+    {
+      "id": "4b5e8ff3-f157-474f-a679-986705f33aab",
+      "type": "workflowInputImage",
+      "params": {
+        "imageIndex": 1
+      },
+      "x": -34.82352941176467,
+      "y": 569.4117647058822
+    },
+    {
+      "id": "0631fe5a-a956-4f1e-b7f4-216864cc7e0f",
+      "type": "geminiWatermarkRemove",
+      "params": {},
+      "x": 110.35294117647062,
+      "y": 602.3529411764705
+    },
+    {
+      "id": "5dd90e27-1d95-4d0f-b069-4ecb6412e002",
+      "type": "resize",
+      "params": {
+        "w": 128,
+        "h": 128,
+        "keepAspect": 1,
+        "pixelated": 1
+      },
+      "x": 393.88235294117646,
+      "y": 554.1176470588233
+    },
+    {
+      "id": "ae18bce3-b914-4805-80cf-872bbb0d6ee4",
+      "type": "gridDeleteRow",
+      "params": {
+        "gCols": 2,
+        "gRows": 2,
+        "rowIndex": 2
+      },
+      "x": 473.8823529411765,
+      "y": 607.0588235294117
+    },
+    {
+      "id": "608c9f7f-12fe-4f24-ba00-e6353a32c68c",
+      "type": "gridDeleteCol",
+      "params": {
+        "gCols": 2,
+        "gRows": 2,
+        "colIndex": 2
+      },
+      "x": 511.52941176470574,
+      "y": 681.1764705882354
+    },
+    {
+      "id": "4e459a92-221f-48e0-a247-f3d0f8bc6a1d",
+      "type": "matteGlobal",
+      "params": {
+        "tolerance": 80,
+        "feather": 5
+      },
+      "x": 717.4117647058823,
+      "y": 627.0588235294117
+    },
+    {
+      "id": "1693cc38-a06e-4dba-944d-fc0b8445fb43",
+      "type": "gridDeleteRow",
+      "params": {
+        "gCols": 2,
+        "gRows": 2,
+        "rowIndex": 1
+      },
+      "x": 731.5294117647059,
+      "y": 708.2352941176471
+    },
+    {
+      "id": "edaf2b1e-f7c9-4270-b722-efb374dfcea1",
+      "type": "gridDeleteCol",
+      "params": {
+        "gCols": 2,
+        "gRows": 2,
+        "colIndex": 2
+      },
+      "x": 753.8823529411764,
+      "y": 774.1176470588235
+    },
+    {
+      "id": "c43b3106-07ef-48f5-b966-23c7eaf44049",
+      "type": "gridDeleteRow",
+      "params": {
+        "gCols": 2,
+        "gRows": 2,
+        "rowIndex": 1
+      },
+      "x": 810.3529411764705,
+      "y": 828.2352941176471
+    },
+    {
+      "id": "b7d0bdd2-3101-454f-a4c4-1ad005032c9c",
+      "type": "crop",
+      "params": {
+        "left": 0,
+        "top": 0,
+        "right": 8,
+        "bottom": 0
+      },
+      "x": 975.0588235294117,
+      "y": 634.1176470588235
+    },
+    {
+      "id": "ba9ad48e-886d-41be-b4b1-27ce20613820",
+      "type": "resize",
+      "params": {
+        "w": 48,
+        "h": 32,
+        "keepAspect": 1,
+        "pixelated": 1
+      },
+      "x": 835.0588235294122,
+      "y": 789.4117647058823
+    },
+    {
+      "id": "442ce305-af07-4743-b600-12c620de559b",
+      "type": "workflowInputImage",
+      "params": {
+        "imageIndex": 1
+      },
+      "x": 1240.9411764705885,
+      "y": 431.7647058823529
+    },
+    {
+      "id": "537ab4ca-7551-4df8-89f3-3a699ad8c683",
+      "type": "resize",
+      "params": {
+        "w": 128,
+        "h": 128,
+        "keepAspect": 1,
+        "pixelated": 1
+      },
+      "x": 1364.9411764705885,
+      "y": 523.529411764706
+    },
+    {
+      "id": "4c54d9c3-2ead-4f29-98a8-0d55c32c6f6c",
+      "type": "gridDeleteRow",
+      "params": {
+        "gCols": 2,
+        "gRows": 2,
+        "rowIndex": 2
+      },
+      "x": 1252.0000000000002,
+      "y": 630.5882352941178
+    },
+    {
+      "id": "398d7a2c-05d9-4f39-a36f-e8ac74f2ec71",
+      "type": "gridDeleteCol",
+      "params": {
+        "gCols": 2,
+        "gRows": 2,
+        "colIndex": 2
+      },
+      "x": 1373.1764705882354,
+      "y": 671.764705882353
+    },
+    {
+      "id": "d0dff5db-2bca-4bc6-a6e3-f3c478f031e0",
+      "type": "matteGlobal",
+      "params": {
+        "tolerance": 80,
+        "feather": 5
+      },
+      "x": 1435.529411764706,
+      "y": 611.7647058823532
+    },
+    {
+      "id": "69d6d0bb-3954-4bd0-a93d-079980164bd8",
+      "type": "gridDeleteCol",
+      "params": {
+        "gCols": 2,
+        "gRows": 2,
+        "colIndex": 1
+      },
+      "x": 1475.529411764706,
+      "y": 627.0588235294118
+    },
+    {
+      "id": "9d75d33a-4984-4282-a925-5a30003d5e5c",
+      "type": "customGridRearrange",
+      "params": {
+        "splitCols": 1,
+        "splitRows": 4,
+        "outRows": 1,
+        "outCols": 4
+      },
+      "rearrangeGrid": [
+        [
+          -2,
+          1,
+          3,
+          -2
+        ]
+      ],
+      "x": 1720.2352941176473,
+      "y": 557.6470588235294
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-9f3c25fc-a5b0-4082-9929-ed3b48d7fada-a6aaff8b-e665-4029-85b9-cd6438dd5fdd-in-1774685401835",
+      "source": "9f3c25fc-a5b0-4082-9929-ed3b48d7fada",
+      "target": "a6aaff8b-e665-4029-85b9-cd6438dd5fdd"
+    },
+    {
+      "id": "e-43a27813-55ed-4d16-89f3-e7e7ea0fdf47-f4d1454e-ca7a-4310-874a-bb7abf9f08b5-in-1774685449214",
+      "source": "43a27813-55ed-4d16-89f3-e7e7ea0fdf47",
+      "target": "f4d1454e-ca7a-4310-874a-bb7abf9f08b5"
+    },
+    {
+      "id": "e-f4d1454e-ca7a-4310-874a-bb7abf9f08b5-319a1c1e-e31e-4865-bab2-dde5b2b45c56-in-1774685722634",
+      "source": "f4d1454e-ca7a-4310-874a-bb7abf9f08b5",
+      "target": "319a1c1e-e31e-4865-bab2-dde5b2b45c56"
+    },
+    {
+      "id": "e-319a1c1e-e31e-4865-bab2-dde5b2b45c56-f8a99253-2168-418d-b5ca-7de1fb58f005-in-1774685731984",
+      "source": "319a1c1e-e31e-4865-bab2-dde5b2b45c56",
+      "target": "f8a99253-2168-418d-b5ca-7de1fb58f005"
+    },
+    {
+      "id": "e-f8a99253-2168-418d-b5ca-7de1fb58f005-085fb3da-4a64-41d0-8933-538e73f1f915-in-1774685747754",
+      "source": "f8a99253-2168-418d-b5ca-7de1fb58f005",
+      "target": "085fb3da-4a64-41d0-8933-538e73f1f915"
+    },
+    {
+      "id": "e-085fb3da-4a64-41d0-8933-538e73f1f915-ec0058c2-7efd-406c-99d9-696f324f68a8-in-1774685780934",
+      "source": "085fb3da-4a64-41d0-8933-538e73f1f915",
+      "target": "ec0058c2-7efd-406c-99d9-696f324f68a8"
+    },
+    {
+      "id": "e-a6aaff8b-e665-4029-85b9-cd6438dd5fdd-136a798a-6686-4823-b7d7-2488335bc097-in-1774685841784",
+      "source": "a6aaff8b-e665-4029-85b9-cd6438dd5fdd",
+      "target": "136a798a-6686-4823-b7d7-2488335bc097"
+    },
+    {
+      "id": "e-136a798a-6686-4823-b7d7-2488335bc097-43a27813-55ed-4d16-89f3-e7e7ea0fdf47-in-1774685845214",
+      "source": "136a798a-6686-4823-b7d7-2488335bc097",
+      "target": "43a27813-55ed-4d16-89f3-e7e7ea0fdf47"
+    },
+    {
+      "id": "e-99b2cf90-016e-445c-b55a-e9785ccefa02-9f3c25fc-a5b0-4082-9929-ed3b48d7fada-in-1774685896344",
+      "source": "99b2cf90-016e-445c-b55a-e9785ccefa02",
+      "target": "9f3c25fc-a5b0-4082-9929-ed3b48d7fada"
+    },
+    {
+      "id": "e-4b5e8ff3-f157-474f-a679-986705f33aab-0631fe5a-a956-4f1e-b7f4-216864cc7e0f-in-1774685925774",
+      "source": "4b5e8ff3-f157-474f-a679-986705f33aab",
+      "target": "0631fe5a-a956-4f1e-b7f4-216864cc7e0f"
+    },
+    {
+      "id": "e-0631fe5a-a956-4f1e-b7f4-216864cc7e0f-5dd90e27-1d95-4d0f-b069-4ecb6412e002-in-1774685942997",
+      "source": "0631fe5a-a956-4f1e-b7f4-216864cc7e0f",
+      "target": "5dd90e27-1d95-4d0f-b069-4ecb6412e002"
+    },
+    {
+      "id": "e-5dd90e27-1d95-4d0f-b069-4ecb6412e002-ae18bce3-b914-4805-80cf-872bbb0d6ee4-in-1774685986044",
+      "source": "5dd90e27-1d95-4d0f-b069-4ecb6412e002",
+      "target": "ae18bce3-b914-4805-80cf-872bbb0d6ee4"
+    },
+    {
+      "id": "e-ae18bce3-b914-4805-80cf-872bbb0d6ee4-608c9f7f-12fe-4f24-ba00-e6353a32c68c-in-1774686007804",
+      "source": "ae18bce3-b914-4805-80cf-872bbb0d6ee4",
+      "target": "608c9f7f-12fe-4f24-ba00-e6353a32c68c"
+    },
+    {
+      "id": "e-608c9f7f-12fe-4f24-ba00-e6353a32c68c-4e459a92-221f-48e0-a247-f3d0f8bc6a1d-in-1774686022524",
+      "source": "608c9f7f-12fe-4f24-ba00-e6353a32c68c",
+      "target": "4e459a92-221f-48e0-a247-f3d0f8bc6a1d"
+    },
+    {
+      "id": "e-4e459a92-221f-48e0-a247-f3d0f8bc6a1d-1693cc38-a06e-4dba-944d-fc0b8445fb43-in-1774686081426",
+      "source": "4e459a92-221f-48e0-a247-f3d0f8bc6a1d",
+      "target": "1693cc38-a06e-4dba-944d-fc0b8445fb43"
+    },
+    {
+      "id": "e-1693cc38-a06e-4dba-944d-fc0b8445fb43-edaf2b1e-f7c9-4270-b722-efb374dfcea1-in-1774686084254",
+      "source": "1693cc38-a06e-4dba-944d-fc0b8445fb43",
+      "target": "edaf2b1e-f7c9-4270-b722-efb374dfcea1"
+    },
+    {
+      "id": "e-edaf2b1e-f7c9-4270-b722-efb374dfcea1-c43b3106-07ef-48f5-b966-23c7eaf44049-in-1774686105196",
+      "source": "edaf2b1e-f7c9-4270-b722-efb374dfcea1",
+      "target": "c43b3106-07ef-48f5-b966-23c7eaf44049"
+    },
+    {
+      "id": "e-c43b3106-07ef-48f5-b966-23c7eaf44049-b7d0bdd2-3101-454f-a4c4-1ad005032c9c-in-1774686163284",
+      "source": "c43b3106-07ef-48f5-b966-23c7eaf44049",
+      "target": "b7d0bdd2-3101-454f-a4c4-1ad005032c9c"
+    },
+    {
+      "id": "e-b7d0bdd2-3101-454f-a4c4-1ad005032c9c-ba9ad48e-886d-41be-b4b1-27ce20613820-in-1774686264965",
+      "source": "b7d0bdd2-3101-454f-a4c4-1ad005032c9c",
+      "target": "ba9ad48e-886d-41be-b4b1-27ce20613820"
+    },
+    {
+      "id": "e-442ce305-af07-4743-b600-12c620de559b-537ab4ca-7551-4df8-89f3-3a699ad8c683-in-1774686405332",
+      "source": "442ce305-af07-4743-b600-12c620de559b",
+      "target": "537ab4ca-7551-4df8-89f3-3a699ad8c683"
+    },
+    {
+      "id": "e-537ab4ca-7551-4df8-89f3-3a699ad8c683-4c54d9c3-2ead-4f29-98a8-0d55c32c6f6c-in-1774686448300",
+      "source": "537ab4ca-7551-4df8-89f3-3a699ad8c683",
+      "target": "4c54d9c3-2ead-4f29-98a8-0d55c32c6f6c"
+    },
+    {
+      "id": "e-4c54d9c3-2ead-4f29-98a8-0d55c32c6f6c-398d7a2c-05d9-4f39-a36f-e8ac74f2ec71-in-1774686453095",
+      "source": "4c54d9c3-2ead-4f29-98a8-0d55c32c6f6c",
+      "target": "398d7a2c-05d9-4f39-a36f-e8ac74f2ec71"
+    },
+    {
+      "id": "e-398d7a2c-05d9-4f39-a36f-e8ac74f2ec71-d0dff5db-2bca-4bc6-a6e3-f3c478f031e0-in-1774686466705",
+      "source": "398d7a2c-05d9-4f39-a36f-e8ac74f2ec71",
+      "target": "d0dff5db-2bca-4bc6-a6e3-f3c478f031e0"
+    },
+    {
+      "id": "e-d0dff5db-2bca-4bc6-a6e3-f3c478f031e0-69d6d0bb-3954-4bd0-a93d-079980164bd8-in-1774686482165",
+      "source": "d0dff5db-2bca-4bc6-a6e3-f3c478f031e0",
+      "target": "69d6d0bb-3954-4bd0-a93d-079980164bd8"
+    },
+    {
+      "id": "e-69d6d0bb-3954-4bd0-a93d-079980164bd8-9d75d33a-4984-4282-a925-5a30003d5e5c-in-1774686633947",
+      "source": "69d6d0bb-3954-4bd0-a93d-079980164bd8",
+      "target": "9d75d33a-4984-4282-a925-5a30003d5e5c"
+    }
+  ],
+  "presetName": "8bit"
+}
