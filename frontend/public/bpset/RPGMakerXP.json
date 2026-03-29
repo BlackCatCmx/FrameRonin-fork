@@ -1,0 +1,100 @@
+{
+  "version": 7,
+  "nodes": [
+    {
+      "id": "64409ad9-3d68-4bb3-94bc-ba215d64c93e",
+      "type": "geminiWatermarkRemove",
+      "params": {},
+      "x": 91.76470588235293,
+      "y": 201.1764705882353
+    },
+    {
+      "id": "0881e258-f6d1-456b-8f29-402256a741e9",
+      "type": "resize",
+      "params": {
+        "w": 144,
+        "h": 144,
+        "keepAspect": 1,
+        "pixelated": 1
+      },
+      "x": 70.58823529411762,
+      "y": 310.5882352941177
+    },
+    {
+      "id": "eafd81d5-1c94-4b55-a238-5b0c6182fea0",
+      "type": "gridCopyRow",
+      "params": {
+        "gCols": 4,
+        "gRows": 3,
+        "rowIndex": 2,
+        "atRow": 3
+      },
+      "x": 502.3529411764706,
+      "y": 110.58823529411764
+    },
+    {
+      "id": "ad961f35-2751-4aad-9f21-2ccd9ca88028",
+      "type": "gridFlipRow",
+      "params": {
+        "gCols": 4,
+        "gRows": 4,
+        "rowIndex": 3
+      },
+      "x": 803.5294117647059,
+      "y": 195.29411764705884
+    },
+    {
+      "id": "eb13e9f9-e719-486c-b55c-54c111b8be0c",
+      "type": "matteContiguous",
+      "params": {
+        "tolerance": 80,
+        "feather": 5
+      },
+      "x": 184.70588235294127,
+      "y": 468.23529411764713
+    },
+    {
+      "id": "1c529dba-11e4-4a64-80e2-02e3d7c35bfd",
+      "type": "evenSplitPerCellEdge",
+      "params": {
+        "evenCols": 4,
+        "evenRows": 4,
+        "cellEdgeMode": 1,
+        "edgeL": 2,
+        "edgeT": 0,
+        "edgeR": 2,
+        "edgeB": 0
+      },
+      "x": 1068.235294117647,
+      "y": 225.88235294117652
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-64409ad9-3d68-4bb3-94bc-ba215d64c93e-0881e258-f6d1-456b-8f29-402256a741e9-in-1774708646391",
+      "source": "64409ad9-3d68-4bb3-94bc-ba215d64c93e",
+      "target": "0881e258-f6d1-456b-8f29-402256a741e9"
+    },
+    {
+      "id": "e-0881e258-f6d1-456b-8f29-402256a741e9-eb13e9f9-e719-486c-b55c-54c111b8be0c-in-1774708668811",
+      "source": "0881e258-f6d1-456b-8f29-402256a741e9",
+      "target": "eb13e9f9-e719-486c-b55c-54c111b8be0c"
+    },
+    {
+      "id": "e-eb13e9f9-e719-486c-b55c-54c111b8be0c-eafd81d5-1c94-4b55-a238-5b0c6182fea0-in-1774708674941",
+      "source": "eb13e9f9-e719-486c-b55c-54c111b8be0c",
+      "target": "eafd81d5-1c94-4b55-a238-5b0c6182fea0"
+    },
+    {
+      "id": "e-eafd81d5-1c94-4b55-a238-5b0c6182fea0-ad961f35-2751-4aad-9f21-2ccd9ca88028-in-1774708693781",
+      "source": "eafd81d5-1c94-4b55-a238-5b0c6182fea0",
+      "target": "ad961f35-2751-4aad-9f21-2ccd9ca88028"
+    },
+    {
+      "id": "e-ad961f35-2751-4aad-9f21-2ccd9ca88028-1c529dba-11e4-4a64-80e2-02e3d7c35bfd-in-1774758556253",
+      "source": "ad961f35-2751-4aad-9f21-2ccd9ca88028",
+      "target": "1c529dba-11e4-4a64-80e2-02e3d7c35bfd"
+    }
+  ],
+  "presetName": "RPGoldX"
+}

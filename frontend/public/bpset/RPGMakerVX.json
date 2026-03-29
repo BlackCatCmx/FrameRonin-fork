@@ -1,0 +1,63 @@
+{
+  "version": 7,
+  "nodes": [
+    {
+      "id": "e5ce9442-d2c1-4f6e-9c37-8e79e7fb145a",
+      "type": "geminiWatermarkRemove",
+      "params": {},
+      "x": -18.823529411764724,
+      "y": 135.29411764705884
+    },
+    {
+      "id": "7381408b-2772-4b2c-8b3c-ed458c0318a9",
+      "type": "resize",
+      "params": {
+        "w": 128,
+        "h": 128,
+        "keepAspect": 1,
+        "pixelated": 1
+      },
+      "x": 305.88235294117646,
+      "y": 63.529411764705856
+    },
+    {
+      "id": "bb539d9c-aabf-4d87-8a58-39cfb64cec67",
+      "type": "matteContiguous",
+      "params": {
+        "tolerance": 80,
+        "feather": 5
+      },
+      "x": 272.94117647058823,
+      "y": 308.235294117647
+    },
+    {
+      "id": "22e155b5-939d-4864-ab11-271ee29d8b8c",
+      "type": "gridDeleteCol",
+      "params": {
+        "gCols": 4,
+        "gRows": 4,
+        "colIndex": 4
+      },
+      "x": 552.9411764705883,
+      "y": 308.235294117647
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-e5ce9442-d2c1-4f6e-9c37-8e79e7fb145a-7381408b-2772-4b2c-8b3c-ed458c0318a9-in-1774759451135",
+      "source": "e5ce9442-d2c1-4f6e-9c37-8e79e7fb145a",
+      "target": "7381408b-2772-4b2c-8b3c-ed458c0318a9"
+    },
+    {
+      "id": "e-7381408b-2772-4b2c-8b3c-ed458c0318a9-bb539d9c-aabf-4d87-8a58-39cfb64cec67-in-1774759460365",
+      "source": "7381408b-2772-4b2c-8b3c-ed458c0318a9",
+      "target": "bb539d9c-aabf-4d87-8a58-39cfb64cec67"
+    },
+    {
+      "id": "e-bb539d9c-aabf-4d87-8a58-39cfb64cec67-22e155b5-939d-4864-ab11-271ee29d8b8c-in-1774759552525",
+      "source": "bb539d9c-aabf-4d87-8a58-39cfb64cec67",
+      "target": "22e155b5-939d-4864-ab11-271ee29d8b8c"
+    }
+  ],
+  "presetName": "RPGMakerVX"
+}

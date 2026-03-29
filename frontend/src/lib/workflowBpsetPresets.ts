@@ -29,6 +29,16 @@ export const WORKFLOW_BPSET_PRESETS: WorkflowBpsetPresetMeta[] = [
     labelKey: 'roninProWorkflowBpset_rpgmakerV3X',
   },
   {
+    id: 'rpgmakerVX',
+    url: bpsetUrl('RPGMakerVX.json'),
+    labelKey: 'roninProWorkflowBpset_rpgmakerVX',
+  },
+  {
+    id: 'rpgmakerXP',
+    url: bpsetUrl('RPGMakerXP.json'),
+    labelKey: 'roninProWorkflowBpset_rpgmakerXP',
+  },
+  {
     id: 'Dfinal',
     url: bpsetUrl('Dfinal.json'),
     labelKey: 'roninProWorkflowBpset_Dfinal',

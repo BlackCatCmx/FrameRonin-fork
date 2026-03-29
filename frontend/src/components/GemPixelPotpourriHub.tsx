@@ -36,9 +36,9 @@ export default function GemPixelPotpourriHub({ onBack }: GemPixelPotpourriHubPro
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+          gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
           gap: 12,
-          maxWidth: 520,
+          maxWidth: 720,
         }}
       >
         {GEM_PIXEL_POTPOURRI_HUB_SLOTS.map((preset, i) => {

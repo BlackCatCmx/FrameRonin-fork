@@ -46,9 +46,12 @@ export const GEM_PIXEL_TUNSHITIANDI_S_URL =
 /** 生成大杂烩 · RPG骑马（潜墨千羽） */
 export const GEM_PIXEL_RPG_HORSE_QIANMO_URL =
   'https://gemini.google.com/gem/901be39a347f?usp=sharing'
-/** 生成大杂烩 · RPGold（s） */
-export const GEM_PIXEL_RPGOLD_S_URL =
+/** 生成大杂烩 · RPGMakerXP（原 RPGold Gem 链接） */
+export const GEM_PIXEL_RPGMAKER_XP_URL =
   'https://gemini.google.com/gem/1XeOiyNUE7oGZBn9rk4Xlk4fEzDGwIbAL?usp=sharing'
+/** 生成大杂烩 · RPGMakerVX */
+export const GEM_PIXEL_RPGMAKER_VX_URL =
+  'https://gemini.google.com/gem/1nkRcCxJJGcVNc4fEHjj45wpr32m9PV1B?usp=sharing'
 
 export interface GemPixelPotpourriItem {
   url: string
@@ -70,9 +73,14 @@ export const GEM_PIXEL_POTPOURRI_HUB_SLOTS: (GemPixelPotpourriItem | null)[] = [
     previewPublicPath: 'gempic/riderrpg.png',
   },
   {
-    url: GEM_PIXEL_RPGOLD_S_URL,
-    labelKey: 'gemPixelPotpourriRpgoldS',
+    url: GEM_PIXEL_RPGMAKER_XP_URL,
+    labelKey: 'gemPixelPotpourriRpgMakerXP',
     previewPublicPath: 'gempic/rpgold.png',
+  },
+  {
+    url: GEM_PIXEL_RPGMAKER_VX_URL,
+    labelKey: 'gemPixelPotpourriRpgMakerVX',
+    previewPublicPath: 'gempic/RPGMakerVX.png',
   },
   null,
   null,
@@ -82,7 +90,7 @@ export const GEM_PIXEL_POTPOURRI_HUB_SLOTS: (GemPixelPotpourriItem | null)[] = [
   null,
 ]
 
-/** 首页「生成大杂烩」按钮顺序；每行 3 个由 UI grid 控制 */
+/** 首页「生成大杂烩」按钮顺序；子页每行 4 个由 UI grid 控制 */
 export const GEM_PIXEL_POTPOURRI: GemPixelPotpourriItem[] = [
   { url: GEM_RPGMAKER_URL_V1, labelKey: 'moduleNanobananaRpgmakerGemV1' },
   { url: GEM_RPGMAKER_URL_V1_1, labelKey: 'moduleNanobananaRpgmakerGemV1_1' },
