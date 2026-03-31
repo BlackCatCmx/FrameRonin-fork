@@ -1,8 +1,7 @@
-import * as opencvStar from '@techstark/opencv-js'
+import type * as OpenCvStar from '@techstark/opencv-js'
 
-const cvModule = (opencvStar as { default?: unknown }).default ?? opencvStar
-
-type CvModule = typeof opencvStar & {
+/** 与原先静态导入时一致；此处仅用 `import type`，不把 OpenCV 运行时打进主包 */
+type CvModule = typeof OpenCvStar & {
   Mat?: unknown
   onRuntimeInitialized?: () => void
   then?: unknown
@@ -23,15 +22,18 @@ async function waitUntilMatUsable(cv: CvModule, timeoutMs: number): Promise<void
   throw new Error('OpenCV Mat not usable (timeout)')
 }
 
-export async function loadOpenCv(): Promise<CvModule> {
+async function resolveImportedCv(): Promise<CvModule> {
+  const opencvStar = await import('@techstark/opencv-js')
+  const cvModuleRaw = (opencvStar as { default?: unknown }).default ?? opencvStar
+
   let cv: CvModule
 
-  if (cvModule instanceof Promise) {
-    cv = (await cvModule) as CvModule
-  } else if ((cvModule as CvModule).Mat) {
-    cv = cvModule as CvModule
+  if (cvModuleRaw instanceof Promise) {
+    cv = (await cvModuleRaw) as CvModule
+  } else if ((cvModuleRaw as CvModule).Mat) {
+    cv = cvModuleRaw as CvModule
   } else {
-    const mod = cvModule as CvModule
+    const mod = cvModuleRaw as CvModule
     try {
       await Promise.race([
         new Promise<void>((resolve) => {
@@ -56,4 +58,14 @@ export async function loadOpenCv(): Promise<CvModule> {
   }
 
   return cv
+}
+
+let loadOpenCvPromise: Promise<CvModule> | null = null
+
+/** 首次调用时动态加载 @techstark/opencv-js，避免打进首页主包 */
+export function loadOpenCv(): Promise<CvModule> {
+  if (!loadOpenCvPromise) {
+    loadOpenCvPromise = resolveImportedCv()
+  }
+  return loadOpenCvPromise
 }
