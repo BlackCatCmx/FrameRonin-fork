@@ -3,6 +3,7 @@ import { Button, Checkbox, InputNumber, message, Radio, Slider, Space, Tabs, Typ
 import { BorderOutlined, DownloadOutlined } from '@ant-design/icons'
 import type { UploadFile } from 'antd'
 import { useLanguage } from '../i18n/context'
+import { formatError } from '../i18n/locales'
 import StashableImage from './StashableImage'
 import StashDropZone from './StashDropZone'
 import { maxSafeUpscaleForImage } from '../lib/pixellise/safeUpscale'
@@ -51,6 +52,47 @@ function normalizeNaturalRect(
   w = Math.min(w, nw - x)
   h = Math.min(h, nh - y)
   return { x, y, w: Math.max(1, w), h: Math.max(1, h) }
+}
+
+async function loadImageDataForPerfectPixel(
+  file: File,
+  crop: NaturalRect | null,
+  maxSide: number,
+): Promise<ImageData> {
+  const url = URL.createObjectURL(file)
+  try {
+    const img = await new Promise<HTMLImageElement>((res, rej) => {
+      const i = new Image()
+      i.onload = () => res(i)
+      i.onerror = () => rej(new Error('load'))
+      i.src = url
+    })
+    let sx = 0
+    let sy = 0
+    let sw = img.naturalWidth
+    let sh = img.naturalHeight
+    if (crop) {
+      sx = Math.floor(crop.x)
+      sy = Math.floor(crop.y)
+      sw = Math.floor(crop.w)
+      sh = Math.floor(crop.h)
+    }
+    let dw = sw
+    let dh = sh
+    if (dw < 1 || dh < 1) throw new Error('ERR_PERFECT_PIXEL_GRID')
+    if (Math.max(dw, dh) > maxSide) {
+      const sc = maxSide / Math.max(dw, dh)
+      dw = Math.max(1, Math.round(dw * sc))
+      dh = Math.max(1, Math.round(dh * sc))
+    }
+    const c = document.createElement('canvas')
+    c.width = dw
+    c.height = dh
+    c.getContext('2d')!.drawImage(img, sx, sy, sw, sh, 0, 0, dw, dh)
+    return c.getContext('2d')!.getImageData(0, 0, dw, dh)
+  } finally {
+    URL.revokeObjectURL(url)
+  }
 }
 
 async function cropImageFileToPngBlob(file: File, rect: NaturalRect): Promise<Blob> {
@@ -330,7 +372,9 @@ function mergeNearbyColorsImage(img: HTMLImageElement, strength: number): Promis
 
 export default function ImagePixelate() {
   const { t } = useLanguage()
-  const [activeTab, setActiveTab] = useState<'pixelate' | 'mergeNearby' | 'color16' | 'advanced'>('pixelate')
+  const [activeTab, setActiveTab] = useState<
+    'pixelate' | 'mergeNearby' | 'color16' | 'advanced' | 'perfectPixel'
+  >('perfectPixel')
   const [color16Method, setColor16Method] = useState<'rgb' | 'lab'>('lab')
   const [color16Dither, setColor16Dither] = useState(true)
   const [file, setFile] = useState<File | null>(null)
@@ -343,6 +387,14 @@ export default function ImagePixelate() {
   const [advScaleResult, setAdvScaleResult] = useState(1)
   const [advTransparent, setAdvTransparent] = useState(false)
   const [advStatusKey, setAdvStatusKey] = useState<string | null>(null)
+  const [ppSample, setPpSample] = useState<'center' | 'median' | 'majority'>('center')
+  const [ppMinSize, setPpMinSize] = useState(4)
+  const [ppPeakWidth, setPpPeakWidth] = useState(6)
+  const [ppRefine, setPpRefine] = useState(0.25)
+  const [ppFixSquare, setPpFixSquare] = useState(true)
+  const [ppManualGrid, setPpManualGrid] = useState(false)
+  const [ppGridCols, setPpGridCols] = useState(32)
+  const [ppGridRows, setPpGridRows] = useState(32)
   const [resultUrl, setResultUrl] = useState<string | null>(null)
   const [resultBlob, setResultBlob] = useState<Blob | null>(null)
   const [loading, setLoading] = useState(false)
@@ -526,6 +578,47 @@ export default function ImagePixelate() {
     } finally {
       setLoading(false)
       setAdvStatusKey(null)
+    }
+  }
+
+  const runPerfectPixel = async () => {
+    if (!file) return
+    if (
+      previewSelection &&
+      (previewSelection.w < PREVIEW_SELECTION_MIN_SIDE ||
+        previewSelection.h < PREVIEW_SELECTION_MIN_SIDE)
+    ) {
+      message.warning(t('pixelatePreviewSelectTooSmall', { n: PREVIEW_SELECTION_MIN_SIDE }))
+      return
+    }
+    setLoading(true)
+    setResultUrl((old) => {
+      if (old) URL.revokeObjectURL(old)
+      return null
+    })
+    setResultBlob(null)
+    try {
+      await new Promise<void>((r) => requestAnimationFrame(() => r()))
+      const { getPerfectPixel, perfectPixelImageDataToPngBlob, PERFECT_PIXEL_MAX_SIDE } = await import(
+        '../lib/perfectPixel/perfectPixel'
+      )
+      const id = await loadImageDataForPerfectPixel(file, previewSelection, PERFECT_PIXEL_MAX_SIDE)
+      const out = getPerfectPixel(id, {
+        sampleMethod: ppSample,
+        gridSize: ppManualGrid ? { cols: ppGridCols, rows: ppGridRows } : null,
+        minSize: ppMinSize,
+        peakWidth: ppPeakWidth,
+        refineIntensity: ppRefine,
+        fixSquare: ppFixSquare,
+      })
+      const blob = await perfectPixelImageDataToPngBlob(out)
+      setResultBlob(blob)
+      setResultUrl(URL.createObjectURL(blob))
+      message.success(t('pixelatePerfectPixelSuccess', { w: out.width, h: out.height }))
+    } catch (e) {
+      message.error(t('pixelatePerfectPixelFailed') + ': ' + formatError(e, t))
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -770,7 +863,9 @@ export default function ImagePixelate() {
       )}
       <Tabs
         activeKey={activeTab}
-        onChange={(k) => setActiveTab(k as 'pixelate' | 'mergeNearby' | 'color16' | 'advanced')}
+        onChange={(k) =>
+          setActiveTab(k as 'pixelate' | 'mergeNearby' | 'color16' | 'advanced' | 'perfectPixel')
+        }
         items={[
           {
             key: 'pixelate',
@@ -911,6 +1006,120 @@ export default function ImagePixelate() {
               </Space>
             ),
           },
+          {
+            key: 'perfectPixel',
+            label: t('pixelateTabPerfectPixel'),
+            children: (
+              <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+                <Text type="secondary" style={{ display: 'block' }}>
+                  {t('pixelatePerfectPixelHint')}
+                </Text>
+                {previewSelection && (
+                  <Text type="secondary" style={{ display: 'block', fontSize: 12 }}>
+                    {t('pixelateAdvancedRegionOnly')}
+                  </Text>
+                )}
+                <div>
+                  <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
+                    {t('pixelatePerfectPixelSample')}
+                  </Text>
+                  <Radio.Group value={ppSample} onChange={(e) => setPpSample(e.target.value)}>
+                    <Radio value="center">{t('pixelatePerfectPixelCenter')}</Radio>
+                    <Radio value="median">{t('pixelatePerfectPixelMedian')}</Radio>
+                    <Radio value="majority">{t('pixelatePerfectPixelMajority')}</Radio>
+                  </Radio.Group>
+                </div>
+                <Checkbox checked={ppManualGrid} onChange={(e) => setPpManualGrid(e.target.checked)}>
+                  {t('pixelatePerfectPixelManualGrid')}
+                </Checkbox>
+                {ppManualGrid && (
+                  <Space wrap>
+                    <span>
+                      <Text type="secondary">{t('pixelatePerfectPixelGridCols')}</Text>
+                      <InputNumber
+                        min={2}
+                        max={512}
+                        value={ppGridCols}
+                        onChange={(v) => setPpGridCols(v ?? 32)}
+                        style={{ width: 88, marginLeft: 8 }}
+                      />
+                    </span>
+                    <span>
+                      <Text type="secondary">{t('pixelatePerfectPixelGridRows')}</Text>
+                      <InputNumber
+                        min={2}
+                        max={512}
+                        value={ppGridRows}
+                        onChange={(v) => setPpGridRows(v ?? 32)}
+                        style={{ width: 88, marginLeft: 8 }}
+                      />
+                    </span>
+                  </Space>
+                )}
+                <div>
+                  <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
+                    {t('pixelatePerfectPixelMinSize')}
+                  </Text>
+                  <Space wrap>
+                    <Slider
+                      min={2}
+                      max={16}
+                      step={1}
+                      value={ppMinSize}
+                      onChange={setPpMinSize}
+                      style={{ width: 200, marginRight: 16 }}
+                    />
+                    <InputNumber min={2} max={32} value={ppMinSize} onChange={(v) => setPpMinSize(v ?? 4)} style={{ width: 90 }} />
+                  </Space>
+                </div>
+                <div>
+                  <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
+                    {t('pixelatePerfectPixelPeakWidth')}
+                  </Text>
+                  <Space wrap>
+                    <Slider
+                      min={3}
+                      max={12}
+                      step={1}
+                      value={ppPeakWidth}
+                      onChange={setPpPeakWidth}
+                      style={{ width: 200, marginRight: 16 }}
+                    />
+                    <InputNumber min={3} max={20} value={ppPeakWidth} onChange={(v) => setPpPeakWidth(v ?? 6)} style={{ width: 90 }} />
+                  </Space>
+                </div>
+                <div>
+                  <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
+                    {t('pixelatePerfectPixelRefine')}
+                  </Text>
+                  <Space wrap>
+                    <Slider
+                      min={0}
+                      max={0.5}
+                      step={0.05}
+                      value={ppRefine}
+                      onChange={setPpRefine}
+                      style={{ width: 200, marginRight: 16 }}
+                    />
+                    <InputNumber
+                      min={0}
+                      max={0.5}
+                      step={0.05}
+                      value={ppRefine}
+                      onChange={(v) => setPpRefine(typeof v === 'number' ? v : 0.25)}
+                      style={{ width: 90 }}
+                    />
+                  </Space>
+                  <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 4 }}>
+                    {t('pixelatePerfectPixelRefineHint')}
+                  </Text>
+                </div>
+                <Checkbox checked={ppFixSquare} onChange={(e) => setPpFixSquare(e.target.checked)}>
+                  {t('pixelatePerfectPixelFixSquare')}
+                </Checkbox>
+              </Space>
+            ),
+          },
         ]}
       />
       <Space wrap>
@@ -932,6 +1141,11 @@ export default function ImagePixelate() {
         {activeTab === 'advanced' && (
           <Button type="primary" loading={loading} onClick={runAdvancedPixellise} disabled={!file}>
             {t('pixelateAdvancedApply')}
+          </Button>
+        )}
+        {activeTab === 'perfectPixel' && (
+          <Button type="primary" loading={loading} onClick={runPerfectPixel} disabled={!file}>
+            {t('pixelatePerfectPixelApply')}
           </Button>
         )}
         {activeTab === 'advanced' && advStatusKey && loading && (

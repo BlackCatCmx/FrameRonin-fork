@@ -29,21 +29,36 @@ const EIGHT_DIRS: [number, number][] = [
   [-1, -1],
 ]
 
+/** 与 velocityToMonsterRow 一致：各行动画在屏幕上的朝向中心角（弧度） */
+const MONSTER_ROW_ANGLE_CENTERS = [
+  Math.PI, // 0 下
+  (3 * Math.PI) / 4, // 1 右下
+  Math.PI / 2, // 2 右
+  Math.PI / 4, // 3 右上
+  0, // 4 上
+  -Math.PI / 4, // 5 左上
+  -Math.PI / 2, // 6 左
+  (-3 * Math.PI) / 4, // 7 左下
+] as const
+
 /**
  * 行从 0 起：0下、1右下、2右、3右上、4上、5左上、6左、7左下（与素材第1–8行一致）
+ *
+ * 透视里 world +X 对应屏幕左侧，不能直接用 (vx,vz) 与数学八象限点积，否则右上会错成左上。
+ * 用 atan2(-vx,-vz)：0 为朝屏幕上、π/2 为朝屏幕右，与上表一致。
  */
 export function velocityToMonsterRow(vx: number, vz: number): number {
   const s = Math.hypot(vx, vz)
   if (s < 0.08) return 0
-  const nx = vx / s
-  const nz = vz / s
+  const ang = Math.atan2(-vx / s, -vz / s)
   let best = 0
-  let bestDot = -2
-  for (let i = 0; i < EIGHT_DIRS.length; i++) {
-    const [dx, dz] = EIGHT_DIRS[i]!
-    const dot = nx * dx + nz * dz
-    if (dot > bestDot) {
-      bestDot = dot
+  let bestD = Infinity
+  for (let i = 0; i < 8; i++) {
+    const c = MONSTER_ROW_ANGLE_CENTERS[i]!
+    let d = Math.abs(ang - c)
+    if (d > Math.PI) d = 2 * Math.PI - d
+    if (d < bestD) {
+      bestD = d
       best = i
     }
   }

@@ -21,6 +21,19 @@ import {
   velocityToMonsterRow,
   type MonsterInst,
 } from './infiniteMapMonsters'
+import {
+  buildCityPropLayout,
+  CITY_EW_FENCE_Z_CENTER,
+  CITY_EW_FENCE_Z_STEP,
+  CITY_GEN_DEFAULTS,
+  ewFenceExtentZ,
+  findNearestFlatSnowTownPlacement,
+  isInsidePlacedTownFootprint,
+  loadCityPropImages,
+  offsetCityPropLayout,
+  type CityGenParams,
+  type CityPropDef,
+} from './infiniteMapCity'
 
 const { Text } = Typography
 
@@ -62,8 +75,10 @@ const CROP_TOP = H - DISPLAY_H
 /** 透视：地平线提高 = 俯仰略抬，远景地面条带移出可渲染带，少算 blob */
 const HORIZON = Math.floor(H * 0.1)
 const FOCAL = 250
-const CAM_HEIGHT = 80
+const CAM_HEIGHT = 100
 const PLAYER_DZ = 120
+/** 透视/俯视：投影整体下移（逻辑像素，Y 向下为正），人物在 16:9 视窗内略靠下 */
+const CAMERA_FRAME_NUDGE_SY = 24
 /**
  * 距地平线过近的扫描行：dz 极大，对应极远地面；不跑 blob（与视野外一致，省算力）。
  * 这些行改画远景雾色。
@@ -258,25 +273,94 @@ function sampleBlobTerrainRgbResolved(
   return sampleBlobAtlas(land, sheetIndex, wx, wz, TILE_WORLD)
 }
 
+const TERRAIN_SY_START = HORIZON + TERRAIN_MIN_ROW
+
+/** 编辑模式：正交俯视，世界单位 → 屏幕像素；数值越小视野越大（同屏显示更多格） */
+const TOPDOWN_PX_PER_WORLD = 1.72 / 2
+
+function terrainScreenMidY(): number {
+  return (TERRAIN_SY_START + H - 1) / 2
+}
+
+/** 与俯视一致：角色脚底对齐 terrain 带垂直中线（俯视用 mid 作投影中心行），再加 CAMERA_FRAME_NUDGE_SY 整体下移 */
+const PERSP_SY_OFFSET =
+  terrainScreenMidY() - (HORIZON + (FOCAL * CAM_HEIGHT) / PLAYER_DZ) + CAMERA_FRAME_NUDGE_SY
+
+/** 透视：相机在玩家 +Z 侧，朝 -Z 看；相对原实现等于水平面转 180° */
 function screenToWorld(sx: number, sy: number, camX: number, camZ: number): { wx: number; wz: number } | null {
-  const row = sy - HORIZON
+  const row = sy - HORIZON - PERSP_SY_OFFSET
   if (row <= 0) return null
   const dz = (FOCAL * CAM_HEIGHT) / row
-  const wx = camX + ((sx - W / 2) * dz) / FOCAL
-  const wz = camZ + dz
+  const wx = camX - ((sx - W / 2) * dz) / FOCAL
+  const wz = camZ - dz
   return { wx, wz }
 }
 
 function worldToScreen(wx: number, wz: number, camX: number, camZ: number): { sx: number; sy: number } | null {
-  const dz = wz - camZ
+  const dz = camZ - wz
   if (dz <= 0) return null
-  const sx = W / 2 + ((wx - camX) * FOCAL) / dz
+  const sx = W / 2 - ((wx - camX) * FOCAL) / dz
   const row = (FOCAL * CAM_HEIGHT) / dz
-  const sy = HORIZON + row
+  const sy = HORIZON + row + PERSP_SY_OFFSET
   return { sx, sy }
 }
 
-const TERRAIN_SY_START = HORIZON + TERRAIN_MIN_ROW
+function screenToWorldTopdown(
+  sx: number,
+  sy: number,
+  camX: number,
+  camZ: number,
+): { wx: number; wz: number } | null {
+  if (sy < TERRAIN_SY_START) return null
+  const k = TOPDOWN_PX_PER_WORLD
+  const mid = terrainScreenMidY() + CAMERA_FRAME_NUDGE_SY
+  /** 与透视同一套水平面 180°：东↔西、北↔南 */
+  return {
+    wx: camX - (sx - W / 2) / k,
+    wz: camZ + (sy - mid) / k,
+  }
+}
+
+function worldToScreenTopdown(wx: number, wz: number, camX: number, camZ: number): { sx: number; sy: number } {
+  const k = TOPDOWN_PX_PER_WORLD
+  const mid = terrainScreenMidY() + CAMERA_FRAME_NUDGE_SY
+  return {
+    sx: W / 2 - (wx - camX) * k,
+    sy: mid + (wz - camZ) * k,
+  }
+}
+
+function visibleGroundTileBoundsTopdown(
+  camX: number,
+  camZ: number,
+): { tix0: number; tix1: number; tiz0: number; tiz1: number } | null {
+  const corners: [number, number][] = [
+    [0, TERRAIN_SY_START],
+    [W - 1, TERRAIN_SY_START],
+    [0, H - 1],
+    [W - 1, H - 1],
+  ]
+  let minWx = Infinity
+  let maxWx = -Infinity
+  let minWz = Infinity
+  let maxWz = -Infinity
+  for (const [sx, sy] of corners) {
+    const h = screenToWorldTopdown(sx + 0.5, sy + 0.5, camX, camZ)
+    if (!h) continue
+    minWx = Math.min(minWx, h.wx)
+    maxWx = Math.max(maxWx, h.wx)
+    minWz = Math.min(minWz, h.wz)
+    maxWz = Math.max(maxWz, h.wz)
+  }
+  if (!Number.isFinite(minWx)) return null
+  const pad = TILE_WORLD * 6
+  return {
+    tix0: Math.floor((minWx - pad) / TILE_WORLD),
+    tix1: Math.floor((maxWx + pad) / TILE_WORLD),
+    tiz0: Math.floor((minWz - pad) / TILE_WORLD),
+    tiz1: Math.floor((maxWz + pad) / TILE_WORLD),
+  }
+}
 
 /** 地平线以下、尚未进入 blob 带的行：远景雾（无地块采样） */
 function farHazeRgb(sy: number): [number, number, number] {
@@ -378,86 +462,502 @@ const MONSTER_REF_DZ = 90
 const MONSTER_DISPLAY_SCALE = 1.12
 const MONSTER_FEET_DOWN_SRC = 6
 const MONSTER_COUNT_MAX = 80
-/** 树根世界坐标对齐地块上的点；贴地偏移为额外下移（纹理像素 × 透视缩放 sc），修正图底部透明留白 */
-const TREE_FEET_DOWN_MIN = -24
-const TREE_FEET_DOWN_MAX = 40
+/** 小镇元素相对原广告牌比例的整体缩放（0.2 = 20%） */
+const CITY_DISPLAY_SCALE = 1.12 * 0.2
+/**
+ * 东西栏透视四边形：世界 XZ 底边半宽乘此系数，略压屏上宽度（透视下易显胖）。
+ * 1 = 与南北栏同一套 dw 推导；小于 1 仅收窄左右栏。
+ */
+const FENCE_EW_PERSP_WIDTH_MUL = 0.84
 
-function drawSnowTreesSorted(
+/** 东西栏透视默认（宽/高/段间距）；与先前调好的视觉一致 */
+const FENCE_EW_LAYOUT_FIXED = {
+  widthPct: 75,
+  heightPct: 109,
+  spacingPct: 69,
+  posZ: 0,
+  /** 固定：西侧 +、东侧 −（负值两侧外扩） */
+  posX: -16,
+} as const
+
+type CityPropDraw = CityPropDef & { img: HTMLImageElement }
+
+/** 东西栏：固定宽高段间距 + 可调左右偏移；绕 Y 固定 90° 透视四边形 */
+type CityFenceEwLayoutTweak = {
+  widthPct: number
+  heightPct: number
+  spacingPct: number
+  posZ: number
+  /** 世界 X：西侧栏 +posX、东侧栏 −posX（正值两侧向中心收） */
+  posX: number
+}
+
+/** 东西栏绕世界竖轴转角固定为 90°（侧向） */
+const FENCE_EW_YAW_RAD = Math.PI / 2
+
+function fenceEwEffectiveWorld(
+  t: CityPropDef,
+  tw: CityFenceEwLayoutTweak,
+  ewZCenter: number,
+): { wx: number; wz: number } {
+  const wz = ewZCenter + (t.wz - ewZCenter) * (tw.spacingPct / 100) + tw.posZ
+  let wx = t.wx
+  if (tw.posX !== 0) {
+    wx += t.wx < 0 ? tw.posX : -tw.posX
+  }
+  return { wx, wz }
+}
+
+/** 南北栏柱：与段间距 34 闭合，相邻柱碰撞圆相切，不留缝 */
+const CITY_FENCE_NS_COLLIDE_R = 17
+/** 东西栏：沿 Z 的半长（按透视段间距比例）；厚度为 X 向胶囊半径 */
+const CITY_FENCE_EW_HALFLEN_MUL = 0.46
+const CITY_FENCE_EW_THICK_R = 10
+/** 角色脚底简化为圆，与栏检测半径相加 */
+const PLAYER_FENCE_BODY_R = 3
+
+function distSqPointSegment2D(
+  px: number,
+  pz: number,
+  ax: number,
+  az: number,
+  bx: number,
+  bz: number,
+): number {
+  const abx = bx - ax
+  const abz = bz - az
+  const apx = px - ax
+  const apz = pz - az
+  const abLen2 = abx * abx + abz * abz
+  if (abLen2 < 1e-8) return apx * apx + apz * apz
+  let t = (apx * abx + apz * abz) / abLen2
+  t = Math.max(0, Math.min(1, t))
+  const qx = ax + t * abx
+  const qz = az + t * abz
+  const dx = px - qx
+  const dz = pz - qz
+  return dx * dx + dz * dz
+}
+
+/** 与 drawFenceEwPerspectiveYawQuad 一致：底边 Z 限制在南北栏之间 */
+function clipEwFenceSegmentToClampZ(
+  wx: number,
+  wz0: number,
+  wz1: number,
+  clampMin: number,
+  clampMax: number,
+): { ax: number; az: number; bx: number; bz: number } | null {
+  const lo = Math.min(clampMin, clampMax)
+  const hi = Math.max(clampMin, clampMax)
+  let zA = Math.min(wz0, wz1)
+  let zB = Math.max(wz0, wz1)
+  zA = Math.max(zA, lo)
+  zB = Math.min(zB, hi)
+  if (zA >= zB - 1e-2) return null
+  return { ax: wx, az: zA, bx: wx, bz: zB }
+}
+
+function worldPosBlockedByCityFence(
+  px: number,
+  pz: number,
+  layout: readonly CityPropDef[],
+  ewZCenter: number,
+  ewTw: CityFenceEwLayoutTweak,
+  ewClampZ: { min: number; max: number },
+): boolean {
+  const pr = PLAYER_FENCE_BODY_R
+  const rNs = CITY_FENCE_NS_COLLIDE_R + pr
+  const rNsSq = rNs * rNs
+  const rEw = CITY_FENCE_EW_THICK_R + pr
+  const rEwSq = rEw * rEw
+
+  for (const def of layout) {
+    if (def.file !== 'fence1.png') continue
+    if (def.fenceEwUseAxisSliders) {
+      const { wx, wz } = fenceEwEffectiveWorld(def, ewTw, ewZCenter)
+      const dzStep = CITY_EW_FENCE_Z_STEP * (ewTw.spacingPct / 100)
+      const halfLen = Math.max(8, dzStep * CITY_FENCE_EW_HALFLEN_MUL)
+      const seg = clipEwFenceSegmentToClampZ(wx, wz - halfLen, wz + halfLen, ewClampZ.min, ewClampZ.max)
+      if (!seg) continue
+      if (distSqPointSegment2D(px, pz, seg.ax, seg.az, seg.bx, seg.bz) < rEwSq) return true
+    } else {
+      const dx = px - def.wx
+      const dz = pz - def.wz
+      if (dx * dx + dz * dz < rNsSq) return true
+    }
+  }
+  return false
+}
+
+type DepthSprite = { key: number; draw: () => void }
+
+/** 纹理三角形仿射映射到屏幕三角形（Canvas2D 真透视四边形的一半） */
+function drawTexturedTriangleAffine(
   ctx: CanvasRenderingContext2D,
-  treeImg: HTMLImageElement,
+  img: CanvasImageSource,
+  su0: number,
+  sv0: number,
+  su1: number,
+  sv1: number,
+  su2: number,
+  sv2: number,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+) {
+  const x10 = x1 - x0
+  const y10 = y1 - y0
+  const x20 = x2 - x0
+  const y20 = y2 - y0
+  const u10 = su1 - su0
+  const v10 = sv1 - sv0
+  const u20 = su2 - su0
+  const v20 = sv2 - sv0
+  const det = u10 * v20 - u20 * v10
+  if (Math.abs(det) < 1e-5) return
+  const idet = 1 / det
+  const a = (x10 * v20 - x20 * v10) * idet
+  const b = (y10 * v20 - y20 * v10) * idet
+  const c = (x20 * u10 - x10 * u20) * idet
+  const d = (y20 * u10 - y10 * u20) * idet
+  const e = x0 - a * su0 - c * sv0
+  const f = y0 - b * su0 - d * sv0
+  ctx.save()
+  ctx.setTransform(a, b, c, d, e, f)
+  ctx.beginPath()
+  ctx.moveTo(su0, sv0)
+  ctx.lineTo(su1, sv1)
+  ctx.lineTo(su2, sv2)
+  ctx.closePath()
+  ctx.clip()
+  ctx.drawImage(img, 0, 0)
+  ctx.restore()
+}
+
+/**
+ * 东西栏：绕世界 Y（竖轴）在 XZ 上转 θ，底边两端 worldToScreen；上边沿沿**屏幕竖直方向**（-Y）抬 dh。
+ * 若沿底边法线抬高度，底边在屏上接近竖直时法线接近水平，围栏会像躺倒且随视角/人物位置剧变。
+ */
+function drawFenceEwPerspectiveYawQuad(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
   camX: number,
   camZ: number,
-  list: { wx: number; wz: number }[],
-  /** 正值：整图下移，树根更贴地（逻辑为「源图素」再乘当前 sc） */
+  wx: number,
+  wz: number,
+  dz: number,
+  dw: number,
+  dh: number,
+  yOffDisp: number,
+  thetaRad: number,
+  cosRx: number,
+  /** 世界 Z：将底边两端限制在南北栏之间，避免透视底边沿 Z 超出矩形 */
+  clampZMin?: number,
+  clampZMax?: number,
+) {
+  const halfWWorld = ((dw * 0.5 * dz) / FOCAL) * FENCE_EW_PERSP_WIDTH_MUL
+  const c = Math.cos(thetaRad)
+  const s = Math.sin(thetaRad)
+  const dxL = -halfWWorld * c
+  const dzL = -halfWWorld * s
+  const dxR = halfWWorld * c
+  const dzR = halfWWorld * s
+  let wxL = wx + dxL
+  let wzL = wz + dzL
+  let wxR = wx + dxR
+  let wzR = wz + dzR
+  if (clampZMin !== undefined && clampZMax !== undefined) {
+    const lo = Math.min(clampZMin, clampZMax)
+    const hi = Math.max(clampZMin, clampZMax)
+    const z0 = Math.min(wzL, wzR)
+    const z1 = Math.max(wzL, wzR)
+    const nz0 = Math.max(z0, lo)
+    const nz1 = Math.min(z1, hi)
+    if (nz0 >= nz1 - 1e-2) return
+    wzL = nz0
+    wzR = nz1
+    wxL = wx
+    wxR = wx
+  }
+  if (camZ - wzL <= 0 || camZ - wzR <= 0) return
+  const pl = worldToScreen(wxL, wzL, camX, camZ)
+  const pr = worldToScreen(wxR, wzR, camX, camZ)
+  if (!pl || !pr) return
+  const xbl = pl.sx
+  const ybl = pl.sy - CROP_TOP + yOffDisp
+  const xbr = pr.sx
+  const ybr = pr.sy - CROP_TOP + yOffDisp
+  if (Math.hypot(xbr - xbl, ybr - ybl) < 1e-2) return
+  const dhEff = Math.max(4, dh * Math.max(0.06, Math.abs(cosRx)))
+  const xtl = xbl
+  const xtr = xbr
+  const ytl = ybl - dhEff
+  const ytr = ybr - dhEff
+  const iw = img.naturalWidth || 1
+  const ih = img.naturalHeight || 1
+  drawTexturedTriangleAffine(ctx, img, 0, 0, iw, 0, iw, ih, xtl, ytl, xtr, ytr, xbr, ybr)
+  drawTexturedTriangleAffine(ctx, img, 0, 0, iw, ih, 0, ih, xtl, ytl, xbr, ybr, xbl, ybl)
+}
+
+/** 透视：脚底 sy 越大离相机越近，应越晚画；layer 仅作同深度微调 */
+function cityPropDepthKeyPerspective(
+  t: CityPropDraw,
+  camX: number,
+  camZ: number,
+  fenceEwTweak?: CityFenceEwLayoutTweak,
+  ewZCenter: number = CITY_EW_FENCE_Z_CENTER,
+): number | null {
+  const { wx, wz } =
+    fenceEwTweak && t.fenceEwUseAxisSliders
+      ? fenceEwEffectiveWorld(t, fenceEwTweak, ewZCenter)
+      : { wx: t.wx, wz: t.wz }
+  const feet = worldToScreen(wx, wz, camX, camZ)
+  if (!feet) return null
+  if (camZ - wz <= 0) return null
+  return feet.sy + t.layer * 1e-4
+}
+
+function cityPropDepthKeyTopdown(
+  t: CityPropDraw,
+  topCx: number,
+  topCz: number,
+  fenceEwTweak?: CityFenceEwLayoutTweak,
+  ewZCenter: number = CITY_EW_FENCE_Z_CENTER,
+): number {
+  const { wx, wz } =
+    fenceEwTweak && t.fenceEwUseAxisSliders
+      ? fenceEwEffectiveWorld(t, fenceEwTweak, ewZCenter)
+      : { wx: t.wx, wz: t.wz }
+  const feet = worldToScreenTopdown(wx, wz, topCx, topCz)
+  return feet.sy + t.layer * 1e-4
+}
+
+function drawCityPropPerspectiveOne(
+  ctx: CanvasRenderingContext2D,
+  t: CityPropDraw,
+  camX: number,
+  camZ: number,
+  fenceEwTweak?: CityFenceEwLayoutTweak,
+  ewZCenter: number = CITY_EW_FENCE_Z_CENTER,
+  ewFenceClampZ?: { min: number; max: number },
+) {
+  if (!t.img.complete || t.img.naturalWidth < 2) return
+  const ew = t.fenceEwUseAxisSliders && fenceEwTweak
+  const { wx: pwx, wz: pwz } = ew
+    ? fenceEwEffectiveWorld(t, fenceEwTweak, ewZCenter)
+    : { wx: t.wx, wz: t.wz }
+  const feet = worldToScreen(pwx, pwz, camX, camZ)
+  if (!feet) return
+  const dz = camZ - pwz
+  if (dz <= 0) return
+  const row = (FOCAL * CAM_HEIGHT) / dz
+  const syDisp = feet.sy - CROP_TOP
+  if (syDisp < -220 || syDisp > DISPLAY_H + 220) return
+  if (feet.sx < -220 || feet.sx > W + 220) return
+  const refRow = (FOCAL * CAM_HEIGHT) / t.refDz
+  const iw = t.img.naturalWidth || 1
+  const ih = t.img.naturalHeight || 1
+  const sc = Math.max(0.2, Math.min(1.55, row / refRow)) * CITY_DISPLAY_SCALE * (t.scaleMul ?? 1)
+  const wMul = ew ? fenceEwTweak.widthPct / 100 : 1
+  const hMul = ew ? fenceEwTweak.heightPct / 100 : 1
+  const dw = iw * sc * wMul
+  const dh = ih * sc * hMul
+  const yOff = t.feetDownSrcPx * sc * hMul
+  ctx.save()
+  ctx.imageSmoothingEnabled = false
+  if (ew) {
+    drawFenceEwPerspectiveYawQuad(
+      ctx,
+      t.img,
+      camX,
+      camZ,
+      pwx,
+      pwz,
+      dz,
+      dw,
+      dh,
+      yOff,
+      FENCE_EW_YAW_RAD,
+      1,
+      ewFenceClampZ?.min,
+      ewFenceClampZ?.max,
+    )
+  } else {
+    const dw0 = iw * sc
+    const dh0 = ih * sc
+    const yOff0 = t.feetDownSrcPx * sc
+    ctx.drawImage(t.img, feet.sx - dw0 * 0.5, syDisp - dh0 + yOff0, dw0, dh0)
+  }
+  ctx.restore()
+}
+
+function drawCityPropTopdownOne(
+  ctx: CanvasRenderingContext2D,
+  t: CityPropDraw,
+  camX: number,
+  camZ: number,
+  fenceEwTweak?: CityFenceEwLayoutTweak,
+  ewZCenter: number = CITY_EW_FENCE_Z_CENTER,
+) {
+  const k = TOPDOWN_PX_PER_WORLD
+  if (!t.img.complete || t.img.naturalWidth < 2) return
+  const ew = t.fenceEwUseAxisSliders && fenceEwTweak
+  const { wx: pwx, wz: pwz } = ew
+    ? fenceEwEffectiveWorld(t, fenceEwTweak, ewZCenter)
+    : { wx: t.wx, wz: t.wz }
+  const feet = worldToScreenTopdown(pwx, pwz, camX, camZ)
+  const syDisp = feet.sy - CROP_TOP
+  if (syDisp < -220 || syDisp > DISPLAY_H + 220) return
+  if (feet.sx < -220 || feet.sx > W + 220) return
+  const iw = t.img.naturalWidth || 1
+  const ih = t.img.naturalHeight || 1
+  const refTilePx = TILE_WORLD * k
+  const sc =
+    Math.max(0.16, Math.min(1.02, (refTilePx * 1.15) / ih)) * CITY_DISPLAY_SCALE * (t.scaleMul ?? 1)
+  const wMul = ew ? fenceEwTweak.widthPct / 100 : 1
+  const hMul = ew ? fenceEwTweak.heightPct / 100 : 1
+  const dw = iw * sc * wMul
+  const dh = ih * sc * hMul
+  const yOff = t.feetDownSrcPx * sc * hMul
+  ctx.save()
+  ctx.imageSmoothingEnabled = false
+  if (ew) {
+    ctx.translate(feet.sx, syDisp)
+    ctx.rotate(FENCE_EW_YAW_RAD)
+    ctx.drawImage(t.img, -dw * 0.5, -dh + yOff, dw, dh)
+  } else {
+    const dw0 = iw * sc
+    const dh0 = ih * sc
+    const yOff0 = t.feetDownSrcPx * sc
+    ctx.drawImage(t.img, feet.sx - dw0 * 0.5, syDisp - dh0 + yOff0, dw0, dh0)
+  }
+  ctx.restore()
+}
+
+function treeDepthKeyPerspective(wx: number, wz: number, camX: number, camZ: number): number | null {
+  const feet = worldToScreen(wx, wz, camX, camZ)
+  if (!feet) return null
+  if (camZ - wz <= 0) return null
+  return feet.sy
+}
+
+function drawSnowTreePerspectiveOne(
+  ctx: CanvasRenderingContext2D,
+  treeImg: HTMLImageElement,
+  wx: number,
+  wz: number,
   feetDownSrcPx: number,
+  camX: number,
+  camZ: number,
 ) {
   const refRow = (FOCAL * CAM_HEIGHT) / TREE_REF_DZ
   const iw = treeImg.naturalWidth || 1
   const ih = treeImg.naturalHeight || 1
+  const feet = worldToScreen(wx, wz, camX, camZ)
+  if (!feet) return
+  const dz = camZ - wz
+  if (dz <= 0) return
+  const row = (FOCAL * CAM_HEIGHT) / dz
+  const syDisp = feet.sy - CROP_TOP
+  if (syDisp < -110 || syDisp > DISPLAY_H + 110) return
+  if (feet.sx < -110 || feet.sx > W + 110) return
+  const sc = Math.max(0.26, Math.min(1.28, row / refRow)) * TREE_DISPLAY_SCALE
+  const dw = iw * sc
+  const dh = ih * sc
+  const yOff = feetDownSrcPx * sc
   ctx.save()
   ctx.imageSmoothingEnabled = false
-  for (const t of list) {
-    const feet = worldToScreen(t.wx, t.wz, camX, camZ)
-    if (!feet) continue
-    const dz = t.wz - camZ
-    if (dz <= 0) continue
-    const row = (FOCAL * CAM_HEIGHT) / dz
-    const syDisp = feet.sy - CROP_TOP
-    if (syDisp < -110 || syDisp > DISPLAY_H + 110) continue
-    if (feet.sx < -110 || feet.sx > W + 110) continue
-    const sc = Math.max(0.26, Math.min(1.28, row / refRow)) * TREE_DISPLAY_SCALE
-    const dw = iw * sc
-    const dh = ih * sc
-    const yOff = feetDownSrcPx * sc
-    ctx.drawImage(treeImg, feet.sx - dw * 0.5, syDisp - dh + yOff, dw, dh)
-  }
+  ctx.drawImage(treeImg, feet.sx - dw * 0.5, syDisp - dh + yOff, dw, dh)
   ctx.restore()
 }
 
-function drawMonstersSorted(
+function treeDepthKeyTopdown(wx: number, wz: number, topCx: number, topCz: number): number {
+  return worldToScreenTopdown(wx, wz, topCx, topCz).sy
+}
+
+function drawSnowTreeTopdownOne(
+  ctx: CanvasRenderingContext2D,
+  treeImg: HTMLImageElement,
+  wx: number,
+  wz: number,
+  feetDownSrcPx: number,
+  camX: number,
+  camZ: number,
+) {
+  const k = TOPDOWN_PX_PER_WORLD
+  const iw = treeImg.naturalWidth || 1
+  const ih = treeImg.naturalHeight || 1
+  const refTilePx = TILE_WORLD * k
+  const sc = Math.max(0.2, Math.min(0.92, (refTilePx * 1.35) / ih)) * TREE_DISPLAY_SCALE
+  const feet = worldToScreenTopdown(wx, wz, camX, camZ)
+  const syDisp = feet.sy - CROP_TOP
+  if (syDisp < -110 || syDisp > DISPLAY_H + 110) return
+  if (feet.sx < -110 || feet.sx > W + 110) return
+  const dw = iw * sc
+  const dh = ih * sc
+  const yOff = feetDownSrcPx * sc
+  ctx.save()
+  ctx.imageSmoothingEnabled = false
+  ctx.drawImage(treeImg, feet.sx - dw * 0.5, syDisp - dh + yOff, dw, dh)
+  ctx.restore()
+}
+
+function monsterDepthKeyPerspective(m: MonsterInst, camX: number, camZ: number): number | null {
+  const feet = worldToScreen(m.wx, m.wz, camX, camZ)
+  if (!feet) return null
+  if (camZ - m.wz <= 0) return null
+  return feet.sy + 5e-3
+}
+
+function drawMonsterPerspectiveOne(
   ctx: CanvasRenderingContext2D,
   imgs: HTMLImageElement[],
-  list: MonsterInst[],
+  m: MonsterInst,
   camX: number,
   camZ: number,
 ) {
   const refRow = (FOCAL * CAM_HEIGHT) / MONSTER_REF_DZ
+  const img = imgs[m.sheetIndex]
+  if (!img?.complete || img.naturalWidth < MONSTER_COLS || img.naturalHeight < MONSTER_ROWS) return
+  const cw = Math.floor(img.naturalWidth / MONSTER_COLS)
+  const ch = Math.floor(img.naturalHeight / MONSTER_ROWS)
+  if (cw < 1 || ch < 1) return
+  const row = velocityToMonsterRow(m.vx, m.vz)
+  const col = m.frame % MONSTER_COLS
+  const feet = worldToScreen(m.wx, m.wz, camX, camZ)
+  if (!feet) return
+  const dz = camZ - m.wz
+  if (dz <= 0) return
+  const rowH = (FOCAL * CAM_HEIGHT) / dz
+  const syDisp = feet.sy - CROP_TOP
+  if (syDisp < -130 || syDisp > DISPLAY_H + 130) return
+  if (feet.sx < -130 || feet.sx > W + 130) return
+  const sc = Math.max(0.22, Math.min(1.35, rowH / refRow)) * MONSTER_DISPLAY_SCALE
+  const dw = cw * sc
+  const dh = ch * sc
+  const yOff = MONSTER_FEET_DOWN_SRC * sc
   ctx.save()
   ctx.imageSmoothingEnabled = false
-  for (const m of list) {
-    const img = imgs[m.sheetIndex]
-    if (!img?.complete || img.naturalWidth < MONSTER_COLS || img.naturalHeight < MONSTER_ROWS) continue
-    const cw = Math.floor(img.naturalWidth / MONSTER_COLS)
-    const ch = Math.floor(img.naturalHeight / MONSTER_ROWS)
-    if (cw < 1 || ch < 1) continue
-    const row = velocityToMonsterRow(m.vx, m.vz)
-    const col = m.frame % MONSTER_COLS
-    const feet = worldToScreen(m.wx, m.wz, camX, camZ)
-    if (!feet) continue
-    const dz = m.wz - camZ
-    if (dz <= 0) continue
-    const rowH = (FOCAL * CAM_HEIGHT) / dz
-    const syDisp = feet.sy - CROP_TOP
-    if (syDisp < -130 || syDisp > DISPLAY_H + 130) continue
-    if (feet.sx < -130 || feet.sx > W + 130) continue
-    const sc = Math.max(0.22, Math.min(1.35, rowH / refRow)) * MONSTER_DISPLAY_SCALE
-    const dw = cw * sc
-    const dh = ch * sc
-    const yOff = MONSTER_FEET_DOWN_SRC * sc
-    ctx.drawImage(
-      img,
-      col * cw,
-      row * ch,
-      cw,
-      ch,
-      feet.sx - dw * 0.5,
-      syDisp - dh + yOff,
-      dw,
-      dh,
-    )
-  }
+  ctx.drawImage(
+    img,
+    col * cw,
+    row * ch,
+    cw,
+    ch,
+    feet.sx - dw * 0.5,
+    syDisp - dh + yOff,
+    dw,
+    dh,
+  )
   ctx.restore()
 }
+
+/** 树根世界坐标对齐地块上的点；贴地偏移为额外下移（纹理像素 × 透视缩放 sc），修正图底部透明留白 */
+const TREE_FEET_DOWN_MIN = -24
+const TREE_FEET_DOWN_MAX = 40
 
 /** 全屏压暗 + 径向暗角；dimPct / vignettePct 为 0–100 */
 function drawScenePostFx(
@@ -523,7 +1023,7 @@ export default function InfiniteMapScene() {
   const keysRef = useRef<Set<string>>(new Set())
   const posRef = useRef({ x: 0, z: 400 })
   const animRef = useRef({ name: 'idledown', frameIdx: 0, accum: 0 })
-  const facingRef = useRef(1)
+  const facingRef = useRef(-1)
   const rafRef = useRef(0)
   const lastTimeRef = useRef(0)
   const frameMapRef = useRef<Map<string, HTMLCanvasElement>>(new Map())
@@ -537,6 +1037,7 @@ export default function InfiniteMapScene() {
   const [ready, setReady] = useState(false)
   const [musicOn, setMusicOn] = useState(true)
   const [showTerrainLabels, setShowTerrainLabels] = useState(false)
+  const [editMode, setEditMode] = useState(false)
   const [terrainSeaPct, setTerrainSeaPct] = useState(25)
   const [terrainMtnPct, setTerrainMtnPct] = useState(56)
   const [fxDimPct, setFxDimPct] = useState(12)
@@ -556,11 +1057,45 @@ export default function InfiniteMapScene() {
   const monsterImgsRef = useRef<HTMLImageElement[]>([])
   const monstersRef = useRef<MonsterInst[]>([])
   const showTerrainLabelsRef = useRef(false)
+  const editModeRef = useRef(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const gameWrapRef = useRef<HTMLDivElement>(null)
   const fallSnowRef = useRef<FallFlake[] | null>(null)
   const treeSnowImgRef = useRef<HTMLImageElement | null>(null)
+  const cityImgsRef = useRef<Map<string, HTMLImageElement>>(new Map())
+  const cityGenRef = useRef<CityGenParams>({ ...CITY_GEN_DEFAULTS })
+  const cityLayoutRef = useRef<CityPropDef[]>(buildCityPropLayout(CITY_GEN_DEFAULTS))
+  const townPlaceRef = useRef<{ placeX: number; placeZ: number }>({
+    placeX: 0,
+    placeZ: CITY_GEN_DEFAULTS.ewFenceZCenter,
+  })
+  const [cityGen, setCityGen] = useState<CityGenParams>(() => ({ ...CITY_GEN_DEFAULTS }))
+  const [townPlaceNonce, setTownPlaceNonce] = useState(0)
+  const fenceEwLayoutRef = useRef<CityFenceEwLayoutTweak>({ ...FENCE_EW_LAYOUT_FIXED })
   const [displayScale, setDisplayScale] = useState(1)
+
+  useLayoutEffect(() => {
+    cityGenRef.current = cityGen
+    const bw = blobWorldRef.current
+    const local = buildCityPropLayout(cityGen)
+    const px = posRef.current.x
+    const pz = posRef.current.z
+    const tw = TILE_WORLD
+    let place: { placeX: number; placeZ: number }
+    if (bw && ready) {
+      const ringShuffle = townPlaceNonce > 0 ? townPlaceNonce * 494_137 + cityGen.seed * 1_009 : undefined
+      const found = findNearestFlatSnowTownPlacement(bw, cityGen, tw, px, pz, 160, ringShuffle)
+      place =
+        found ?? {
+          placeX: (Math.floor(px / tw) + 0.5) * tw,
+          placeZ: (Math.floor(pz / tw) + 0.5) * tw,
+        }
+    } else {
+      place = { placeX: px, placeZ: pz }
+    }
+    townPlaceRef.current = place
+    cityLayoutRef.current = offsetCityPropLayout(local, place.placeX, place.placeZ, cityGen.ewFenceZCenter)
+  }, [cityGen, ready, terrainSeaPct, terrainMtnPct, townPlaceNonce])
 
   useLayoutEffect(() => {
     const el = gameWrapRef.current
@@ -603,6 +1138,10 @@ export default function InfiniteMapScene() {
   useEffect(() => {
     showTerrainLabelsRef.current = showTerrainLabels
   }, [showTerrainLabels])
+
+  useEffect(() => {
+    editModeRef.current = editMode
+  }, [editMode])
 
   useEffect(() => {
     monsterCountRef.current = monsterCount
@@ -686,6 +1225,7 @@ export default function InfiniteMapScene() {
       posRef.current.z = p.wz
     }
     rebuildMonsterSwarm()
+    setTownPlaceNonce((n) => n + 1)
   }, [terrainSeaPct, terrainMtnPct, rebuildMonsterSwarm])
 
   useEffect(() => {
@@ -696,6 +1236,16 @@ export default function InfiniteMapScene() {
     img.src = TREE_SNOW_URL
     return () => {
       if (treeSnowImgRef.current === img) treeSnowImgRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    const cancel = loadCityPropImages((m) => {
+      cityImgsRef.current = m
+    })
+    return () => {
+      cancel()
+      cityImgsRef.current = new Map()
     }
   }, [])
 
@@ -822,34 +1372,50 @@ export default function InfiniteMapScene() {
       let nx = pos.x
       let nz = pos.z
       let nextAnim: string = animRef.current.name
-      // 世界 Z 增大 = 向地平线前进；与 wz=camZ+dz 的透视一致
+      // 地图水平面相对旧版转 180° 后，WASD 与屏幕直觉一致需取反位移
       if (w && !s) {
         nextAnim = `${walkPrefix}up`
-        nz += speed
+        nz -= speed
       } else if (s && !w) {
         nextAnim = `${walkPrefix}down`
-        nz -= speed
+        nz += speed
       } else if (a && !d) {
-        nextAnim = `${walkPrefix}L`
-        facingRef.current = 1
-        nx -= speed
-      } else if (d && !a) {
         nextAnim = `${walkPrefix}L`
         facingRef.current = -1
         nx += speed
+      } else if (d && !a) {
+        nextAnim = `${walkPrefix}L`
+        facingRef.current = 1
+        nx -= speed
       } else {
-        nextAnim = facingRef.current === 1 ? 'idleL' : 'idledown'
+        nextAnim = facingRef.current === -1 ? 'idleL' : 'idledown'
       }
 
       if (bwMove) {
         const tix = (x: number) => Math.floor(x / TILE_WORLD)
         const tiz = (z: number) => Math.floor(z / TILE_WORLD)
-        if (isBlobTileWalkable(bwMove, tix(nx), tiz(nz))) {
+        const cgMove = cityGenRef.current
+        const tpMove = townPlaceRef.current
+        const ewZMove = cgMove.ewFenceZCenter
+        const dzPlMove = tpMove.placeZ - ewZMove
+        const extZMove = ewFenceExtentZ(cgMove)
+        const ewClampMove = { min: extZMove.zSouth + dzPlMove, max: extZMove.zNorth + dzPlMove }
+        const canStep = (wx: number, wz: number) =>
+          isBlobTileWalkable(bwMove, tix(wx), tiz(wz)) &&
+          !worldPosBlockedByCityFence(
+            wx,
+            wz,
+            cityLayoutRef.current,
+            ewZMove,
+            fenceEwLayoutRef.current,
+            ewClampMove,
+          )
+        if (canStep(nx, nz)) {
           pos.x = nx
           pos.z = nz
-        } else if (isBlobTileWalkable(bwMove, tix(nx), tiz(pos.z))) {
+        } else if (canStep(nx, pos.z)) {
           pos.x = nx
-        } else if (isBlobTileWalkable(bwMove, tix(pos.x), tiz(nz))) {
+        } else if (canStep(pos.x, nz)) {
           pos.z = nz
         }
       } else {
@@ -864,21 +1430,29 @@ export default function InfiniteMapScene() {
       }
 
       const camX = pos.x
-      const camZ = pos.z - PLAYER_DZ
+      const camZ = pos.z + PLAYER_DZ
+      const edit = editModeRef.current
+      /** 俯视以角色脚底为画面中心；透视相机在 pos.z + PLAYER_DZ，朝 -Z（地图相对旧版转 180°） */
+      const topCx = pos.x
+      const topCz = pos.z
 
       const bwPre = blobWorldRef.current
       if (bwPre) {
-        const vb = visibleGroundTileBounds(camX, camZ)
+        const vb = edit ? visibleGroundTileBoundsTopdown(topCx, topCz) : visibleGroundTileBounds(camX, camZ)
         if (vb) bwPre.preloadTileAABB(vb.tix0, vb.tix1, vb.tiz0, vb.tiz1)
         else
-          bwPre.preloadAroundTile(Math.floor(camX / TILE_WORLD), Math.floor(camZ / TILE_WORLD), 48)
+          bwPre.preloadAroundTile(
+            Math.floor((edit ? topCx : camX) / TILE_WORLD),
+            Math.floor((edit ? topCz : camZ) / TILE_WORLD),
+            48,
+          )
       }
 
       const tilePickCache = new Map<string, BlobTilePick>()
       const bw = blobWorldRef.current
       const mis = monsterImgsRef.current
       const mons = monstersRef.current
-      if (bw && mis.length > 0 && mons.length > 0) {
+      if (!edit && bw && mis.length > 0 && mons.length > 0) {
         for (const m of mons) stepMonster(m, bw, dt, TILE_WORLD)
       }
 
@@ -899,7 +1473,12 @@ export default function InfiniteMapScene() {
             data[p++] = hb
             data[p++] = 255
           } else {
-            const hit = screenToWorld(sx + 0.5, sy + 0.5, camX, camZ)
+            const hit = (edit ? screenToWorldTopdown : screenToWorld)(
+              sx + 0.5,
+              sy + 0.5,
+              edit ? topCx : camX,
+              edit ? topCz : camZ,
+            )
             if (!hit) {
               data[p++] = 12
               data[p++] = 12
@@ -945,111 +1524,196 @@ export default function InfiniteMapScene() {
       ctx.fillRect(0, 0, canvas.width, canvas.height)
       ctx.drawImage(off, 0, CROP_TOP, W, DISPLAY_H, 0, 0, canvas.width, canvas.height)
 
+      const depthBatch: DepthSprite[] = []
+      const cityImgMap = cityImgsRef.current
+      if (cityImgMap.size > 0) {
+        const cg = cityGenRef.current
+        const tp = townPlaceRef.current
+        const ewZCenter = cg.ewFenceZCenter
+        const dzPlace = tp.placeZ - ewZCenter
+        const extZ = ewFenceExtentZ(cg)
+        const ewFenceClampZ = { min: extZ.zSouth + dzPlace, max: extZ.zNorth + dzPlace }
+        for (const def of cityLayoutRef.current) {
+          const img = cityImgMap.get(def.file)
+          if (!img?.complete || img.naturalWidth < 2) continue
+          const item: CityPropDraw = { ...def, img }
+          const ewTw = item.fenceEwUseAxisSliders ? fenceEwLayoutRef.current : undefined
+          if (edit) {
+            depthBatch.push({
+              key: cityPropDepthKeyTopdown(item, topCx, topCz, ewTw, ewZCenter),
+              draw: () => drawCityPropTopdownOne(ctx, item, topCx, topCz, ewTw, ewZCenter),
+            })
+          } else {
+            const k = cityPropDepthKeyPerspective(item, camX, camZ, ewTw, ewZCenter)
+            if (k === null) continue
+            depthBatch.push({
+              key: k,
+              draw: () =>
+                drawCityPropPerspectiveOne(
+                  ctx,
+                  item,
+                  camX,
+                  camZ,
+                  ewTw,
+                  ewZCenter,
+                  ewTw ? ewFenceClampZ : undefined,
+                ),
+            })
+          }
+        }
+      }
+
       const treeImg = treeSnowImgRef.current
-      let treesFront: { wx: number; wz: number }[] = []
+      const treePlaces: { wx: number; wz: number }[] = []
       if (treeImg && treeImg.complete && treeImg.naturalWidth > 0 && bw) {
-        let vbTrees = visibleGroundTileBounds(camX, camZ)
+        let vbTrees = edit ? visibleGroundTileBoundsTopdown(topCx, topCz) : visibleGroundTileBounds(camX, camZ)
         if (!vbTrees) {
-          const tcx = Math.floor(camX / TILE_WORLD)
-          const tcz = Math.floor(camZ / TILE_WORLD)
+          const tcx = Math.floor((edit ? topCx : camX) / TILE_WORLD)
+          const tcz = Math.floor((edit ? topCz : camZ) / TILE_WORLD)
           const sp = 26
           vbTrees = { tix0: tcx - sp, tix1: tcx + sp, tiz0: tcz - sp, tiz1: tcz + sp }
         }
-        const treesBehind: { wx: number; wz: number }[] = []
-        treesFront = []
-        const pz = pos.z
         for (let tiz = vbTrees.tiz0; tiz <= vbTrees.tiz1; tiz++) {
           for (let tix = vbTrees.tix0; tix <= vbTrees.tix1; tix++) {
             if (!isBlobTileLandNotWater(bw, tix, tiz)) continue
             if (!shouldPlaceSnowTreeOnTile(tix, tiz, treePatchDensityRef.current, treeLoneDensityRef.current))
               continue
             const { wx, wz } = snowTreeFeetWorld(tix, tiz)
-            if (wz > pz) treesBehind.push({ wx, wz })
-            else treesFront.push({ wx, wz })
+            const cg = cityGenRef.current
+            const tp = townPlaceRef.current
+            if (isInsidePlacedTownFootprint(wx, wz, cg, tp.placeX, tp.placeZ)) continue
+            treePlaces.push({ wx, wz })
           }
         }
-        treesBehind.sort((a, b) => b.wz - a.wz)
-        treesFront.sort((a, b) => b.wz - a.wz)
-        drawSnowTreesSorted(ctx, treeImg, camX, camZ, treesBehind, treeFeetDownSrcPxRef.current)
+        const fd = treeFeetDownSrcPxRef.current
+        for (const tr of treePlaces) {
+          if (edit) {
+            depthBatch.push({
+              key: treeDepthKeyTopdown(tr.wx, tr.wz, topCx, topCz),
+              draw: () => drawSnowTreeTopdownOne(ctx, treeImg, tr.wx, tr.wz, fd, topCx, topCz),
+            })
+          } else {
+            const k = treeDepthKeyPerspective(tr.wx, tr.wz, camX, camZ)
+            if (k === null) continue
+            depthBatch.push({
+              key: k,
+              draw: () => drawSnowTreePerspectiveOne(ctx, treeImg, tr.wx, tr.wz, fd, camX, camZ),
+            })
+          }
+        }
       }
 
-      if (mis.length > 0 && mons.length > 0) {
-        const pzM = pos.z
-        const monstersBehind = mons.filter((m) => m.wz > pzM).sort((a, b) => b.wz - a.wz)
-        drawMonstersSorted(ctx, mis, monstersBehind, camX, camZ)
+      if (!edit && mis.length > 0 && mons.length > 0) {
+        for (const m of mons) {
+          const k = monsterDepthKeyPerspective(m, camX, camZ)
+          if (k === null) continue
+          depthBatch.push({
+            key: k,
+            draw: () => drawMonsterPerspectiveOne(ctx, mis, m, camX, camZ),
+          })
+        }
       }
 
       const aDef = ANIMS.find((x) => x.name === anim.name) ?? ANIMS.find((x) => x.name === 'idledown')!
       const frameKey = aDef.frames[anim.frameIdx % aDef.frames.length]!
       const frameCanvas = frameMapRef.current.get(frameKey)
 
-      const feet = worldToScreen(pos.x, pos.z, camX, camZ)
-      if (frameCanvas && feet) {
-        const { sx, sy } = feet
-        const syDisp = sy - CROP_TOP
-        const fw = frameCanvas.width
-        const fh = frameCanvas.height
-        const shadowTex = getShadowTexture()
-        const shw = shadowTex.width * 0.85
-        const shh = shadowTex.height * 0.85
-        ctx.save()
-        ctx.translate(sx, syDisp - 2)
-        ctx.scale(0.85, 0.85)
-        ctx.drawImage(shadowTex, -shw / 2, -shh / 2, shw, shh)
-        ctx.restore()
+      if (frameCanvas) {
+        if (edit) {
+          const feet = worldToScreenTopdown(pos.x, pos.z, topCx, topCz)
+          depthBatch.push({
+            key: feet.sy + 0.015,
+            draw: () => {
+              const { sx, sy } = feet
+              const syDisp = sy - CROP_TOP
+              const fw = frameCanvas.width
+              const fh = frameCanvas.height
+              const playerSc = 0.5
+              const shadowTex = getShadowTexture()
+              const shw = shadowTex.width * playerSc
+              const shh = shadowTex.height * playerSc
+              ctx.save()
+              ctx.translate(sx, syDisp - 2)
+              ctx.drawImage(shadowTex, -shw / 2, -shh / 2, shw, shh)
+              ctx.restore()
 
-        ctx.save()
-        ctx.translate(sx, syDisp)
-        ctx.scale(facingRef.current, 1)
-        ctx.drawImage(frameCanvas, -fw / 2, -fh, fw, fh)
-        ctx.restore()
+              ctx.save()
+              ctx.translate(sx, syDisp)
+              ctx.scale(-facingRef.current * playerSc, playerSc)
+              ctx.drawImage(frameCanvas, -fw / 2, -fh, fw, fh)
+              ctx.restore()
+            },
+          })
+        } else {
+          const feet = worldToScreen(pos.x, pos.z, camX, camZ)
+          if (feet) {
+            depthBatch.push({
+              key: feet.sy + 0.015,
+              draw: () => {
+                const { sx, sy } = feet
+                const syDisp = sy - CROP_TOP
+                const fw = frameCanvas.width
+                const fh = frameCanvas.height
+                const shadowTex = getShadowTexture()
+                const shw = shadowTex.width * 0.85
+                const shh = shadowTex.height * 0.85
+                ctx.save()
+                ctx.translate(sx, syDisp - 2)
+                ctx.scale(0.85, 0.85)
+                ctx.drawImage(shadowTex, -shw / 2, -shh / 2, shw, shh)
+                ctx.restore()
+
+                ctx.save()
+                ctx.translate(sx, syDisp)
+                ctx.scale(-facingRef.current, 1)
+                ctx.drawImage(frameCanvas, -fw / 2, -fh, fw, fh)
+                ctx.restore()
+              },
+            })
+          }
+        }
       }
 
-      if (treesFront.length > 0 && treeImg && treeImg.complete && treeImg.naturalWidth > 0) {
-        drawSnowTreesSorted(ctx, treeImg, camX, camZ, treesFront, treeFeetDownSrcPxRef.current)
-      }
-
-      if (mis.length > 0 && mons.length > 0) {
-        const pzM = pos.z
-        const monstersFront = mons.filter((m) => m.wz <= pzM).sort((a, b) => b.wz - a.wz)
-        drawMonstersSorted(ctx, mis, monstersFront, camX, camZ)
-      }
+      depthBatch.sort((a, b) => a.key - b.key)
+      for (const d of depthBatch) d.draw()
 
       let flakes = fallSnowRef.current
-      if (!flakes || flakes.length !== FALL_SNOW_COUNT) {
-        flakes = createFallSnowFlakes()
-        fallSnowRef.current = flakes
-      }
-      const tw = t0 * 0.0018
-      for (const f of flakes) {
-        f.y += f.vy * dt
-        f.x += f.vx * dt + Math.sin(tw + f.wobble) * (f.layer === 0 ? 10 : f.layer === 1 ? 6 : 4) * dt
-        const margin = f.layer === 2 ? 6 : f.layer === 1 ? 3 : 2
-        if (f.y > DISPLAY_H + margin) {
-          f.y = -margin - Math.random() * 60
-          f.x = Math.random() * W
+      if (!edit) {
+        if (!flakes || flakes.length !== FALL_SNOW_COUNT) {
+          flakes = createFallSnowFlakes()
+          fallSnowRef.current = flakes
         }
-        if (f.x > W + margin) f.x = -margin
-        if (f.x < -margin) f.x = W + 2
+        const tw = t0 * 0.0018
+        for (const f of flakes) {
+          f.y += f.vy * dt
+          f.x += f.vx * dt + Math.sin(tw + f.wobble) * (f.layer === 0 ? 10 : f.layer === 1 ? 6 : 4) * dt
+          const margin = f.layer === 2 ? 6 : f.layer === 1 ? 3 : 2
+          if (f.y > DISPLAY_H + margin) {
+            f.y = -margin - Math.random() * 60
+            f.x = Math.random() * W
+          }
+          if (f.x > W + margin) f.x = -margin
+          if (f.x < -margin) f.x = W + 2
+        }
+        ctx.save()
+        ctx.imageSmoothingEnabled = false
+        ctx.beginPath()
+        ctx.rect(0, 0, W, DISPLAY_H)
+        ctx.clip()
+        for (const f of flakes) {
+          const xi = Math.floor(f.x)
+          const yi = Math.floor(f.y)
+          const rgb = rgbForSnowFlake(f.layer, f.wobble)
+          if (f.layer === 0) drawSnowFar(ctx, xi, yi, rgb)
+          else if (f.layer === 1) drawSnowMid(ctx, xi, yi, rgb)
+          else drawSnowNear(ctx, xi, yi, rgb, f.variant, W, DISPLAY_H)
+        }
+        ctx.restore()
       }
-      ctx.save()
-      ctx.imageSmoothingEnabled = false
-      ctx.beginPath()
-      ctx.rect(0, 0, W, DISPLAY_H)
-      ctx.clip()
-      for (const f of flakes) {
-        const xi = Math.floor(f.x)
-        const yi = Math.floor(f.y)
-        const rgb = rgbForSnowFlake(f.layer, f.wobble)
-        if (f.layer === 0) drawSnowFar(ctx, xi, yi, rgb)
-        else if (f.layer === 1) drawSnowMid(ctx, xi, yi, rgb)
-        else drawSnowNear(ctx, xi, yi, rgb, f.variant, W, DISPLAY_H)
-      }
-      ctx.restore()
 
       if (showTerrainLabelsRef.current) {
-        const tcx = camX
-        const tcz = camZ
+        const tcx = edit ? topCx : camX
+        const tcz = edit ? topCz : camZ
         const span = 28
         const tix0 = Math.floor(tcx / TILE_WORLD) - span
         const tix1 = Math.floor(tcx / TILE_WORLD) + span
@@ -1064,7 +1728,7 @@ export default function InfiniteMapScene() {
           for (let tix = tix0; tix <= tix1; tix++) {
             const wx = (tix + 0.5) * TILE_WORLD
             const wz = (tiz + 0.5) * TILE_WORLD
-            const scr = worldToScreen(wx, wz, tcx, tcz)
+            const scr = edit ? worldToScreenTopdown(wx, wz, tcx, tcz) : worldToScreen(wx, wz, tcx, tcz)
             if (!scr) continue
             const y = scr.sy - CROP_TOP
             if (y < -10 || y > DISPLAY_H + 10) continue
@@ -1122,8 +1786,14 @@ export default function InfiniteMapScene() {
         <Checkbox checked={showTerrainLabels} onChange={(e) => setShowTerrainLabels(e.target.checked)}>
           {t('infiniteMapTerrainDebug')}
         </Checkbox>
+        <Checkbox checked={editMode} onChange={(e) => setEditMode(e.target.checked)}>
+          {t('infiniteMapEditMode')}
+        </Checkbox>
         <Button type="default" size="small" onClick={handleRandomMap}>
           {t('infiniteMapRandomMap')}
+        </Button>
+        <Button type="default" size="small" onClick={() => setTownPlaceNonce((n) => n + 1)}>
+          {t('infiniteMapRandomTownPlace')}
         </Button>
       </div>
       <div
@@ -1260,6 +1930,136 @@ export default function InfiniteMapScene() {
               monsterCountRef.current = v
               setMonsterCount(v)
             }}
+          />
+        </div>
+      </div>
+      <Text type="secondary" style={{ fontSize: 11, display: 'block', margin: '0 0 4px', lineHeight: 1.4 }}>
+        {t('infiniteMapCityGenSection')}
+      </Text>
+      <div
+        style={{
+          flexShrink: 0,
+          display: 'flex',
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          alignItems: 'flex-end',
+          gap: 12,
+          width: '100%',
+          padding: '0 0 6px',
+        }}
+      >
+        <div style={{ flex: '1 1 130px', minWidth: 0 }}>
+          <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4, lineHeight: 1.35 }}>
+            {t('infiniteMapCityGenSeed')} <span style={{ color: '#8b9dc3' }}>{cityGen.seed}</span>
+          </Text>
+          <Slider
+            min={0}
+            max={9999}
+            value={cityGen.seed}
+            onChange={(v) => setCityGen((p) => ({ ...p, seed: Math.round(v) }))}
+          />
+        </div>
+        <div style={{ flex: '1 1 130px', minWidth: 0 }}>
+          <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4, lineHeight: 1.35 }}>
+            {t('infiniteMapCityGenGrassHalfIx')} <span style={{ color: '#8b9dc3' }}>{cityGen.grassHalfIx}</span>
+          </Text>
+          <Slider
+            min={1}
+            max={5}
+            value={cityGen.grassHalfIx}
+            onChange={(v) => setCityGen((p) => ({ ...p, grassHalfIx: Math.round(v) }))}
+          />
+        </div>
+        <div style={{ flex: '1 1 130px', minWidth: 0 }}>
+          <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4, lineHeight: 1.35 }}>
+            {t('infiniteMapCityGenGrassRows')} <span style={{ color: '#8b9dc3' }}>{cityGen.grassRows}</span>
+          </Text>
+          <Slider
+            min={3}
+            max={10}
+            value={cityGen.grassRows}
+            onChange={(v) => setCityGen((p) => ({ ...p, grassRows: Math.round(v) }))}
+          />
+        </div>
+        <div style={{ flex: '1 1 130px', minWidth: 0 }}>
+          <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4, lineHeight: 1.35 }}>
+            {t('infiniteMapCityGenGrassJitter')} <span style={{ color: '#8b9dc3' }}>{cityGen.grassJitter}</span>
+          </Text>
+          <Slider
+            min={0}
+            max={24}
+            value={cityGen.grassJitter}
+            onChange={(v) => setCityGen((p) => ({ ...p, grassJitter: v }))}
+          />
+        </div>
+        <div style={{ flex: '1 1 130px', minWidth: 0 }}>
+          <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4, lineHeight: 1.35 }}>
+            {t('infiniteMapCityGenDecorJitter')} <span style={{ color: '#8b9dc3' }}>{cityGen.decorJitter}</span>
+          </Text>
+          <Slider
+            min={0}
+            max={40}
+            value={cityGen.decorJitter}
+            onChange={(v) => setCityGen((p) => ({ ...p, decorJitter: v }))}
+          />
+        </div>
+        <div style={{ flex: '1 1 130px', minWidth: 0 }}>
+          <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4, lineHeight: 1.35 }}>
+            {t('infiniteMapCityGenBuildingWZ')} <span style={{ color: '#8b9dc3' }}>{cityGen.buildingWZShift}</span>
+          </Text>
+          <Slider
+            min={-50}
+            max={50}
+            value={cityGen.buildingWZShift}
+            onChange={(v) => setCityGen((p) => ({ ...p, buildingWZShift: v }))}
+          />
+        </div>
+        <div style={{ flex: '1 1 130px', minWidth: 0 }}>
+          <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4, lineHeight: 1.35 }}>
+            {t('infiniteMapCityGenBuildingWxJitter')}{' '}
+            <span style={{ color: '#8b9dc3' }}>{cityGen.buildingWxJitter}</span>
+          </Text>
+          <Slider
+            min={0}
+            max={30}
+            value={cityGen.buildingWxJitter}
+            onChange={(v) => setCityGen((p) => ({ ...p, buildingWxJitter: v }))}
+          />
+        </div>
+        <div style={{ flex: '1 1 130px', minWidth: 0 }}>
+          <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4, lineHeight: 1.35 }}>
+            {t('infiniteMapCityGenEwSegmentCount')}{' '}
+            <span style={{ color: '#8b9dc3' }}>{cityGen.ewFenceSegmentCount}</span>
+          </Text>
+          <Slider
+            min={2}
+            max={14}
+            value={cityGen.ewFenceSegmentCount}
+            onChange={(v) => setCityGen((p) => ({ ...p, ewFenceSegmentCount: Math.round(v) }))}
+          />
+        </div>
+        <div style={{ flex: '1 1 130px', minWidth: 0 }}>
+          <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4, lineHeight: 1.35 }}>
+            {t('infiniteMapCityGenNsSegmentCount')}{' '}
+            <span style={{ color: '#8b9dc3' }}>{cityGen.nsFenceSegmentCount}</span>
+          </Text>
+          <Slider
+            min={2}
+            max={16}
+            value={cityGen.nsFenceSegmentCount}
+            onChange={(v) => setCityGen((p) => ({ ...p, nsFenceSegmentCount: Math.round(v) }))}
+          />
+        </div>
+        <div style={{ flex: '1 1 130px', minWidth: 0 }}>
+          <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4, lineHeight: 1.35 }}>
+            {t('infiniteMapCityGenScatterCount')}{' '}
+            <span style={{ color: '#8b9dc3' }}>{cityGen.cityScatterCount}</span>
+          </Text>
+          <Slider
+            min={0}
+            max={40}
+            value={cityGen.cityScatterCount}
+            onChange={(v) => setCityGen((p) => ({ ...p, cityScatterCount: Math.round(v) }))}
           />
         </div>
       </div>
