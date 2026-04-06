@@ -73,4 +73,9 @@ export const WORKFLOW_BPSET_PRESETS: WorkflowBpsetPresetMeta[] = [
     url: bpsetUrl('吞食天地.json'),
     labelKey: 'roninProWorkflowBpset_tunshitiandi',
   },
+  {
+    id: 'xiaosuJianshi',
+    url: bpsetUrl('小苏剑士.json'),
+    labelKey: 'roninProWorkflowBpset_xiaosuJianshi',
+  },
 ]

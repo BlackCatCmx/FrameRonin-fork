@@ -39,13 +39,23 @@ export default function GemPixelPotpourriHub({ onBack }: GemPixelPotpourriHubPro
           gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
           gap: 12,
           maxWidth: 720,
+          alignItems: 'start',
         }}
       >
         {GEM_PIXEL_POTPOURRI_HUB_SLOTS.map((preset, i) => {
           const n = i + 1
           if (preset) {
             return (
-              <div key={n} style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
+              <div
+                key={n}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                  minWidth: 0,
+                  gridColumn: preset.spanFullRow ? '1 / -1' : undefined,
+                }}
+              >
                 <Button
                   type="primary"
                   block
@@ -57,24 +67,36 @@ export default function GemPixelPotpourriHub({ onBack }: GemPixelPotpourriHubPro
                   {t(preset.labelKey)}
                 </Button>
                 {preset.previewPublicPaths ? (
-                   <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                     {preset.previewPublicPaths.map((path, idx) => (
-                       <img
-                         key={idx}
-                         src={publicAssetUrl(path)}
-                         alt=""
-                         style={{
-                           flex: `1 1 calc(20% - 3.2px)`,
-                           maxHeight: 128,
-                           objectFit: 'contain',
-                           imageRendering: 'pixelated',
-                           background: 'rgba(0,0,0,0.04)',
-                           borderRadius: 4,
-                         }}
-                       />
-                     ))}
-                   </div>
-                 ) : preset.previewPublicPath ? (
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'row',
+                      flexWrap: 'nowrap',
+                      gap: 6,
+                      overflowX: 'auto',
+                      paddingBottom: 2,
+                      WebkitOverflowScrolling: 'touch',
+                    }}
+                  >
+                    {preset.previewPublicPaths.map((path, idx) => (
+                      <img
+                        key={idx}
+                        src={publicAssetUrl(path)}
+                        alt=""
+                        style={{
+                          flex: '0 0 auto',
+                          height: 56,
+                          width: 'auto',
+                          maxWidth: 120,
+                          objectFit: 'contain',
+                          imageRendering: 'pixelated',
+                          background: 'rgba(0,0,0,0.04)',
+                          borderRadius: 4,
+                        }}
+                      />
+                    ))}
+                  </div>
+                ) : preset.previewPublicPath ? (
                    <img
                      src={publicAssetUrl(preset.previewPublicPath)}
                      alt=""

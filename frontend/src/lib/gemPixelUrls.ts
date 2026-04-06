@@ -63,15 +63,12 @@ export interface GemPixelPotpourriItem {
   previewPublicPath?: string
   /** 相对 `public/` 的多张预览图路径数组，如 `['gempic/img1.gif', 'gempic/img2.gif']` */
   previewPublicPaths?: string[]
+  /** 在子页 4 列网格中占满一行（用于多图预览等） */
+  spanFullRow?: boolean
 }
 
 /** 生成大杂烩子页 9 格：`null` 为预留位 */
 export const GEM_PIXEL_POTPOURRI_HUB_SLOTS: (GemPixelPotpourriItem | null)[] = [
-  {
-    url: GEM_PIXEL_HORIZONTAL_SWORDSMAN_XIAOSU_URL,
-    labelKey: 'gemPixelPotpourriHorizontalSwordsmanXiaosu',
-    previewPublicPaths: ['jiguo.gif', 'jiguo2.gif', 'jiguo3.gif', 'jiguo4.gif', 'jiguo5.gif'],
-  },
   {
     url: GEM_PIXEL_TUNSHITIANDI_S_URL,
     labelKey: 'gemPixelPotpourriTunshiTiandiS',
@@ -91,6 +88,12 @@ export const GEM_PIXEL_POTPOURRI_HUB_SLOTS: (GemPixelPotpourriItem | null)[] = [
     url: GEM_PIXEL_RPGMAKER_VX_URL,
     labelKey: 'gemPixelPotpourriRpgMakerVX',
     previewPublicPath: 'gempic/RPGMakerVX.png',
+  },
+  {
+    url: GEM_PIXEL_HORIZONTAL_SWORDSMAN_XIAOSU_URL,
+    labelKey: 'gemPixelPotpourriHorizontalSwordsmanXiaosu',
+    previewPublicPaths: ['jiguo.gif', 'jiguo2.gif', 'jiguo3.gif', 'jiguo4.gif', 'jiguo5.gif'],
+    spanFullRow: true,
   },
   null,
   null,
