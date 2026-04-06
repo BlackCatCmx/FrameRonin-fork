@@ -52,16 +52,26 @@ export const GEM_PIXEL_RPGMAKER_XP_URL =
 /** 生成大杂烩 · RPGMakerVX */
 export const GEM_PIXEL_RPGMAKER_VX_URL =
   'https://gemini.google.com/gem/1nkRcCxJJGcVNc4fEHjj45wpr32m9PV1B?usp=sharing'
+/** 生成大杂烩 · 横版剑士一套（小苏早睡） */
+export const GEM_PIXEL_HORIZONTAL_SWORDSMAN_XIAOSU_URL =
+  'https://gemini.google.com/gem/13o4qqMyv0Ez-WHU330xqLzesV7NYubQo?usp=sharing'
 
 export interface GemPixelPotpourriItem {
   url: string
   labelKey: string
   /** 相对 `public/` 的预览图路径，如 `gempic/吞食天地.png` */
   previewPublicPath?: string
+  /** 相对 `public/` 的多张预览图路径数组，如 `['gempic/img1.gif', 'gempic/img2.gif']` */
+  previewPublicPaths?: string[]
 }
 
 /** 生成大杂烩子页 9 格：`null` 为预留位 */
 export const GEM_PIXEL_POTPOURRI_HUB_SLOTS: (GemPixelPotpourriItem | null)[] = [
+  {
+    url: GEM_PIXEL_HORIZONTAL_SWORDSMAN_XIAOSU_URL,
+    labelKey: 'gemPixelPotpourriHorizontalSwordsmanXiaosu',
+    previewPublicPaths: ['jiguo.gif', 'jiguo2.gif', 'jiguo3.gif', 'jiguo4.gif', 'jiguo5.gif'],
+  },
   {
     url: GEM_PIXEL_TUNSHITIANDI_S_URL,
     labelKey: 'gemPixelPotpourriTunshiTiandiS',

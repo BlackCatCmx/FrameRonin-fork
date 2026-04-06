@@ -56,20 +56,38 @@ export default function GemPixelPotpourriHub({ onBack }: GemPixelPotpourriHubPro
                 >
                   {t(preset.labelKey)}
                 </Button>
-                {preset.previewPublicPath ? (
-                  <img
-                    src={publicAssetUrl(preset.previewPublicPath)}
-                    alt=""
-                    style={{
-                      width: '100%',
-                      maxHeight: 128,
-                      objectFit: 'contain',
-                      imageRendering: 'pixelated',
-                      background: 'rgba(0,0,0,0.04)',
-                      borderRadius: 4,
-                    }}
-                  />
-                ) : null}
+                {preset.previewPublicPaths ? (
+                   <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                     {preset.previewPublicPaths.map((path, idx) => (
+                       <img
+                         key={idx}
+                         src={publicAssetUrl(path)}
+                         alt=""
+                         style={{
+                           flex: `1 1 calc(20% - 3.2px)`,
+                           maxHeight: 128,
+                           objectFit: 'contain',
+                           imageRendering: 'pixelated',
+                           background: 'rgba(0,0,0,0.04)',
+                           borderRadius: 4,
+                         }}
+                       />
+                     ))}
+                   </div>
+                 ) : preset.previewPublicPath ? (
+                   <img
+                     src={publicAssetUrl(preset.previewPublicPath)}
+                     alt=""
+                     style={{
+                       width: '100%',
+                       maxHeight: 128,
+                       objectFit: 'contain',
+                       imageRendering: 'pixelated',
+                       background: 'rgba(0,0,0,0.04)',
+                       borderRadius: 4,
+                     }}
+                   />
+                 ) : null}
               </div>
             )
           }
