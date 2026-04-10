@@ -1869,12 +1869,17 @@ export default function SpriteSheetAdjust({ integratedSplit = false }: SpriteShe
                   </Text>
                   {integratedSplit && layoutReady && proCropRefUrl && (
                     <Space direction="vertical" size={8} style={{ width: '100%', marginBottom: 12 }}>
-                      <Text type="secondary" style={{ fontSize: 12 }}>
-                        {t('sheetProCellRes')}: {cellW} × {cellH} · {t('sheetProComposedRes')}: {composedW} × {composedH}
-                      </Text>
                       <Text strong style={{ fontSize: 13 }}>{t('sheetProCropAllFrames')}</Text>
                       <Text type="secondary" style={{ fontSize: 12 }}>{t('imagesToSingleCropHint')}</Text>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-start' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexWrap: 'nowrap',
+                          gap: 16,
+                          alignItems: 'flex-start',
+                          overflowX: 'auto',
+                        }}
+                      >
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <Button
@@ -1917,7 +1922,36 @@ export default function SpriteSheetAdjust({ integratedSplit = false }: SpriteShe
                             <Text type="secondary" style={{ fontSize: 12 }}>{t('imagesToSingleCropNegativeHint')}</Text>
                           )}
                         </div>
-                        <div style={{ alignSelf: 'center', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <div style={{ alignSelf: 'flex-start', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          <div
+                            style={{
+                              border: '1px solid rgba(0,0,0,0.12)',
+                              borderRadius: 8,
+                              padding: '8px 10px',
+                              background: 'rgba(255,255,255,0.65)',
+                            }}
+                          >
+                            <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                {t('sheetProCellRes')}: {cellW} × {cellH}
+                              </Text>
+                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                {t('sheetProComposedRes')}: {composedW} × {composedH}
+                              </Text>
+                              {proCropRefSize && naturalSizes.length === frameUrls.length && (
+                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                  {t('sheetProCropComposedTotal', {
+                                    cw: cellW,
+                                    ch: cellH,
+                                    tw: composedW,
+                                    th: composedH,
+                                    cols: gridCols,
+                                    rows: gridRows,
+                                  })}
+                                </Text>
+                              )}
+                            </Space>
+                          </div>
                           <Space wrap align="center">
                             <InputNumber
                               min={-999}
@@ -1954,16 +1988,6 @@ export default function SpriteSheetAdjust({ integratedSplit = false }: SpriteShe
                                 {t('sheetProCropRefFrame', {
                                   w: Math.max(1, proCropRefSize.w - integratedEdgeCrop.left - integratedEdgeCrop.right),
                                   h: Math.max(1, proCropRefSize.h - integratedEdgeCrop.top - integratedEdgeCrop.bottom),
-                                })}
-                              </Text>
-                              <Text type="secondary" style={{ fontSize: 12 }}>
-                                {t('sheetProCropComposedTotal', {
-                                  cw: cellW,
-                                  ch: cellH,
-                                  tw: composedW,
-                                  th: composedH,
-                                  cols: gridCols,
-                                  rows: gridRows,
                                 })}
                               </Text>
                             </Space>
@@ -2193,29 +2217,6 @@ export default function SpriteSheetAdjust({ integratedSplit = false }: SpriteShe
                                 />
                               </>
                             )}
-                            {/* 分辨率显示 */}
-                            {previewImgSize && (
-                              <div
-                                style={{
-                                  position: 'absolute',
-                                  left: 4,
-                                  bottom: 4,
-                                  padding: '2px 6px',
-                                  background: 'rgba(0,0,0,0.5)',
-                                  color: '#fff',
-                                  fontSize: 11,
-                                  borderRadius: 4,
-                                  pointerEvents: 'none',
-                                  zIndex: 4,
-                                  maxWidth: 'calc(100% - 8px)',
-                                  lineHeight: 1.35,
-                                }}
-                              >
-                                {integratedSplit && layoutReady && previewContentSize
-                                  ? `${t('sheetProFrameContentRes')}: ${previewContentSize.w}×${previewContentSize.h} · ${t('sheetProCellRes')}: ${previewImgSize.w}×${previewImgSize.h} · ${t('sheetProComposedRes')}: ${composedW}×${composedH}`
-                                  : `${previewImgSize.w} × ${previewImgSize.h}`}
-                              </div>
-                            )}
                             {fixedPixelFixes.map((fix, idx) => (
                               <div
                                 key={idx}
@@ -2253,6 +2254,25 @@ export default function SpriteSheetAdjust({ integratedSplit = false }: SpriteShe
                       )}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 2, padding: 2, flexShrink: 0 }}>
+                      {previewImgSize && (
+                        <div
+                          style={{
+                            marginBottom: 6,
+                            padding: '6px 8px',
+                            border: '1px solid rgba(0,0,0,0.12)',
+                            borderRadius: 6,
+                            background: 'rgba(255,255,255,0.72)',
+                            maxWidth: 220,
+                            lineHeight: 1.35,
+                          }}
+                        >
+                          <Text type="secondary" style={{ fontSize: 11 }}>
+                            {integratedSplit && layoutReady && previewContentSize
+                              ? `${t('sheetProFrameContentRes')}: ${previewContentSize.w}×${previewContentSize.h} · ${t('sheetProCellRes')}: ${previewImgSize.w}×${previewImgSize.h} · ${t('sheetProComposedRes')}: ${composedW}×${composedH}`
+                              : `${previewImgSize.w} × ${previewImgSize.h}`}
+                          </Text>
+                        </div>
+                      )}
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); setFrameOffsetAndCount(displayIdx, { dy: -1 }, 'up') }}

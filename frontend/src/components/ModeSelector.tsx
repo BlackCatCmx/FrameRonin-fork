@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import { Card, Row, Col, Typography, Space, Button } from 'antd'
+import { Card, Row, Col, Typography, Space, Button, Tooltip } from 'antd'
 import { ArrowsAltOutlined, AppstoreOutlined, BlockOutlined, BugOutlined, EnvironmentOutlined, FileImageOutlined, PictureOutlined, VideoCameraOutlined, ThunderboltOutlined, BorderOuterOutlined, ScissorOutlined, SafetyOutlined, ShareAltOutlined, ControlOutlined, RocketOutlined } from '@ant-design/icons'
 import { useAuth } from '../auth/context'
 import { RONIN_PRO_REQUIRE_NFT } from '../config/features'
@@ -49,6 +49,15 @@ const HOME_DESC_TEXT: CSSProperties = {
   alignSelf: 'stretch',
   textAlign: 'center',
 }
+const RPGMAKER_V1_SAMPLE_URL = `${import.meta.env.BASE_URL}gempic/${encodeURIComponent('RPGMAKERv1案例.png')}`
+const RPGMAKER_V1_1_SAMPLE_URL = `${import.meta.env.BASE_URL}gempic/${encodeURIComponent('RPGMAKERv1.1案例.png')}`
+const GEM_MONSTER_ZOMBIE_B2_SAMPLE_URL = `${import.meta.env.BASE_URL}gempic/${encodeURIComponent('僵尸B2案例.gif')}`
+const GEM_MONSTER_ZOMBIE_B1_SAMPLE_URL_1 = `${import.meta.env.BASE_URL}gempic/${encodeURIComponent('僵尸B1案例1.gif')}`
+const GEM_MONSTER_ZOMBIE_B1_SAMPLE_URL_2 = `${import.meta.env.BASE_URL}gempic/${encodeURIComponent('僵尸B1案例2.gif')}`
+const GEM_CHAR_V2_SAMPLE_URL = `${import.meta.env.BASE_URL}gempic/${encodeURIComponent('常规角色v2案例.gif')}`
+const GEM_CHAR_V2_2_SAMPLE_URL = `${import.meta.env.BASE_URL}gempic/${encodeURIComponent('常规角色V2.2案例.gif')}`
+const GEM_CHAR_V23OT_SAMPLE_URL = `${import.meta.env.BASE_URL}gempic/${encodeURIComponent('v2.3ot案例.gif')}`
+const GEM_CHAR_V3_SAMPLE_URL = `${import.meta.env.BASE_URL}gempic/${encodeURIComponent('常规角色V3案例.gif')}`
 
 /** 游戏手柄图标 */
 function GamepadIcon({ style }: { style?: CSSProperties }) {
@@ -194,13 +203,46 @@ export default function ModeSelector({ onSelect }: Props) {
             <div style={{ lineHeight: 1.4 }}>
               <Text strong style={{ fontSize: 15 }}>{t('moduleNanobananaRpgmaker')}</Text>
             </div>
+            <Text style={{ display: 'block', marginTop: 4, fontSize: 12, color: '#b55233', fontWeight: 600 }}>
+              ! {t('moduleNanobananaRpgmakerWarn')}
+            </Text>
             <Space size="small" style={{ marginTop: 12, justifyContent: 'center', width: '100%', alignSelf: 'stretch' }} wrap>
-              <Button type="primary" size="small" onClick={() => window.open(GEM_RPGMAKER_URL_V1, '_blank')}>
-                {t('moduleNanobananaRpgmakerGemV1')}
-              </Button>
-              <Button type="primary" size="small" onClick={() => window.open(GEM_RPGMAKER_URL_V1_1, '_blank')}>
-                {t('moduleNanobananaRpgmakerGemV1_1')}
-              </Button>
+              <Tooltip
+                placement="bottom"
+                overlayStyle={{ maxWidth: 240 }}
+                title={
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <Text style={{ color: '#fff', fontSize: 12 }}>{t('moduleNanobananaRpgmakerSample')}</Text>
+                    <img
+                      src={RPGMAKER_V1_SAMPLE_URL}
+                      alt="RPGMaker V1 sample"
+                      style={{ width: 180, imageRendering: 'pixelated', borderRadius: 4 }}
+                    />
+                  </div>
+                }
+              >
+                <Button type="primary" size="small" onClick={() => window.open(GEM_RPGMAKER_URL_V1, '_blank')}>
+                  {t('moduleNanobananaRpgmakerGemV1')}
+                </Button>
+              </Tooltip>
+              <Tooltip
+                placement="bottom"
+                overlayStyle={{ maxWidth: 240 }}
+                title={
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <Text style={{ color: '#fff', fontSize: 12 }}>{t('moduleNanobananaRpgmakerSample')}</Text>
+                    <img
+                      src={RPGMAKER_V1_1_SAMPLE_URL}
+                      alt="RPGMaker V1.1 sample"
+                      style={{ width: 180, imageRendering: 'pixelated', borderRadius: 4 }}
+                    />
+                  </div>
+                }
+              >
+                <Button type="primary" size="small" onClick={() => window.open(GEM_RPGMAKER_URL_V1_1, '_blank')}>
+                  {t('moduleNanobananaRpgmakerGemV1_1')}
+                </Button>
+              </Tooltip>
               <Button type="primary" size="small" onClick={() => window.open(GEM_RPGMAKER_URL_V3, '_blank')}>
                 {t('moduleNanobananaRpgmakerGemV3')}
               </Button>
@@ -220,15 +262,60 @@ export default function ModeSelector({ onSelect }: Props) {
               <Text strong style={{ fontSize: 13 }}>{t('moduleGemV2')}</Text>
             </div>
             <Space size="small" style={{ marginTop: 12, justifyContent: 'center', width: '100%', alignSelf: 'stretch' }}>
-              <Button type="primary" size="small" onClick={() => window.open(GEM_V2_URL, '_blank')}>
-                {t('gemV2Link1')}
-              </Button>
-              <Button type="primary" size="small" onClick={() => window.open(GEM_V2_URL_2, '_blank')}>
-                {t('gemV2Link2')}
-              </Button>
-              <Button type="primary" size="small" onClick={() => window.open(GEM_V3_URL, '_blank')}>
-                {t('gemV2Link3')}
-              </Button>
+              <Tooltip
+                placement="bottom"
+                overlayStyle={{ maxWidth: 240 }}
+                title={
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <Text style={{ color: '#fff', fontSize: 12 }}>{t('moduleNanobananaRpgmakerSample')}</Text>
+                    <img
+                      src={GEM_CHAR_V2_SAMPLE_URL}
+                      alt="Pixel character V2 sample"
+                      style={{ height: 96, width: 'auto', objectFit: 'contain', imageRendering: 'pixelated', borderRadius: 4 }}
+                    />
+                  </div>
+                }
+              >
+                <Button type="primary" size="small" onClick={() => window.open(GEM_V2_URL, '_blank')}>
+                  {t('gemV2Link1')}
+                </Button>
+              </Tooltip>
+              <Tooltip
+                placement="bottom"
+                overlayStyle={{ maxWidth: 240 }}
+                title={
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <Text style={{ color: '#fff', fontSize: 12 }}>{t('moduleNanobananaRpgmakerSample')}</Text>
+                    <img
+                      src={GEM_CHAR_V2_2_SAMPLE_URL}
+                      alt="Pixel character V2.2 sample"
+                      style={{ height: 96, width: 'auto', objectFit: 'contain', imageRendering: 'pixelated', borderRadius: 4 }}
+                    />
+                  </div>
+                }
+              >
+                <Button type="primary" size="small" onClick={() => window.open(GEM_V2_URL_2, '_blank')}>
+                  {t('gemV2Link2')}
+                </Button>
+              </Tooltip>
+              <Tooltip
+                placement="bottom"
+                overlayStyle={{ maxWidth: 240 }}
+                title={
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <Text style={{ color: '#fff', fontSize: 12 }}>{t('moduleNanobananaRpgmakerSample')}</Text>
+                    <img
+                      src={GEM_CHAR_V3_SAMPLE_URL}
+                      alt="Pixel character V3 sample"
+                      style={{ height: 96, width: 'auto', objectFit: 'contain', imageRendering: 'pixelated', borderRadius: 4 }}
+                    />
+                  </div>
+                }
+              >
+                <Button type="primary" size="small" onClick={() => window.open(GEM_V3_URL, '_blank')}>
+                  {t('gemV2Link3')}
+                </Button>
+              </Tooltip>
             </Space>
           </Card>
         </Col>
@@ -246,37 +333,89 @@ export default function ModeSelector({ onSelect }: Props) {
               {t('moduleGemV3Desc')}
             </Text>
             <Space size="small" style={{ marginTop: 12, justifyContent: 'center', width: '100%', alignSelf: 'stretch' }} wrap>
-              <Button type="primary" size="small" onClick={() => window.open(GEM_MONSTER_ZOMBIE_B1, '_blank')}>
-                {t('moduleGemMonsterZombieB1')}
-              </Button>
-              <Button type="primary" size="small" onClick={() => window.open(GEM_MONSTER_ZOMBIE_B2, '_blank')}>
-                {t('moduleGemMonsterZombieB2')}
-              </Button>
+              <Tooltip
+                placement="bottom"
+                overlayStyle={{ maxWidth: 280 }}
+                title={
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <Text style={{ color: '#fff', fontSize: 12 }}>{t('moduleNanobananaRpgmakerSample')}</Text>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <img
+                        src={GEM_MONSTER_ZOMBIE_B1_SAMPLE_URL_1}
+                        alt="Zombie B1 sample 1"
+                        style={{ height: 96, width: 'auto', objectFit: 'contain', imageRendering: 'pixelated', borderRadius: 4 }}
+                      />
+                      <img
+                        src={GEM_MONSTER_ZOMBIE_B1_SAMPLE_URL_2}
+                        alt="Zombie B1 sample 2"
+                        style={{ height: 96, width: 'auto', objectFit: 'contain', imageRendering: 'pixelated', borderRadius: 4 }}
+                      />
+                    </div>
+                  </div>
+                }
+              >
+                <Button type="primary" size="small" onClick={() => window.open(GEM_MONSTER_ZOMBIE_B1, '_blank')}>
+                  {t('moduleGemMonsterZombieB1')}
+                </Button>
+              </Tooltip>
+              <Tooltip
+                placement="bottom"
+                overlayStyle={{ maxWidth: 240 }}
+                title={
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <Text style={{ color: '#fff', fontSize: 12 }}>{t('moduleNanobananaRpgmakerSample')}</Text>
+                    <img
+                      src={GEM_MONSTER_ZOMBIE_B2_SAMPLE_URL}
+                      alt="Zombie B2 sample"
+                      style={{ width: 150, imageRendering: 'pixelated', borderRadius: 4 }}
+                    />
+                  </div>
+                }
+              >
+                <Button type="primary" size="small" onClick={() => window.open(GEM_MONSTER_ZOMBIE_B2, '_blank')}>
+                  {t('moduleGemMonsterZombieB2')}
+                </Button>
+              </Tooltip>
             </Space>
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6} style={{ display: 'flex' }}>
-          <a
-            href={GEM_CHAR_V23OT_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ textDecoration: 'none', color: 'inherit', flex: 1, minWidth: 0 }}
-            title={t('moduleCharGenV23OT')}
-          >
-            <Card
-              hoverable
-              styles={{ body: HOME_CARD_BODY_SMALL }}
-              style={{ textAlign: 'center', cursor: 'pointer', borderColor: '#9a8b78', flex: 1, minHeight: 140, width: '100%' }}
-            >
-              <ThunderboltOutlined style={{ fontSize: 32, color: '#b55233', marginBottom: 8, display: 'block' }} />
-              <div style={{ lineHeight: 1.4 }}>
-                <Text strong style={{ fontSize: 13 }}>{t('moduleCharGenV23OT')}</Text>
+          <Tooltip
+            placement="bottom"
+            overlayStyle={{ maxWidth: 240 }}
+            title={
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <Text style={{ color: '#fff', fontSize: 12 }}>{t('moduleNanobananaRpgmakerSample')}</Text>
+                <img
+                  src={GEM_CHAR_V23OT_SAMPLE_URL}
+                  alt="Pixel character V2.3OT sample"
+                  style={{ height: 96, width: 'auto', objectFit: 'contain', imageRendering: 'pixelated', borderRadius: 4 }}
+                />
               </div>
-              <Text type="secondary" style={{ display: 'block', marginTop: 4, fontSize: 11, lineHeight: 1.35, ...HOME_DESC_TEXT }}>
-                {t('moduleCharGenV23OTDesc')}
-              </Text>
-            </Card>
-          </a>
+            }
+          >
+            <a
+              href={GEM_CHAR_V23OT_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ textDecoration: 'none', color: 'inherit', flex: 1, minWidth: 0 }}
+              title={t('moduleCharGenV23OT')}
+            >
+              <Card
+                hoverable
+                styles={{ body: HOME_CARD_BODY_SMALL }}
+                style={{ textAlign: 'center', cursor: 'pointer', borderColor: '#9a8b78', flex: 1, minHeight: 140, width: '100%' }}
+              >
+                <ThunderboltOutlined style={{ fontSize: 32, color: '#b55233', marginBottom: 8, display: 'block' }} />
+                <div style={{ lineHeight: 1.4 }}>
+                  <Text strong style={{ fontSize: 13 }}>{t('moduleCharGenV23OT')}</Text>
+                </div>
+                <Text type="secondary" style={{ display: 'block', marginTop: 4, fontSize: 11, lineHeight: 1.35, ...HOME_DESC_TEXT }}>
+                  {t('moduleCharGenV23OTDesc')}
+                </Text>
+              </Card>
+            </a>
+          </Tooltip>
         </Col>
         <Col xs={24} sm={12} md={6} style={{ display: 'flex' }}>
           <Card
