@@ -17,8 +17,9 @@ export interface PerfectPixelOptions {
 }
 
 const FFT_THUMB_MAX = 512
+const TRANSPARENT_ALPHA = 8
 
-function rgbaToRgbFloat(imageData: ImageData): { r: Float32Array; g: Float32Array; b: Float32Array; w: number; h: number } {
+function rgbaToRgbaFloat(imageData: ImageData): { r: Float32Array; g: Float32Array; b: Float32Array; a: Float32Array; w: number; h: number } {
   const w = imageData.width
   const h = imageData.height
   const d = imageData.data
@@ -26,12 +27,14 @@ function rgbaToRgbFloat(imageData: ImageData): { r: Float32Array; g: Float32Arra
   const r = new Float32Array(n)
   const g = new Float32Array(n)
   const b = new Float32Array(n)
+  const a = new Float32Array(n)
   for (let i = 0, p = 0; i < n; i++, p += 4) {
     r[i] = d[p]!
     g[i] = d[p + 1]!
     b[i] = d[p + 2]!
+    a[i] = d[p + 3]!
   }
-  return { r, g, b, w, h }
+  return { r, g, b, a, w, h }
 }
 
 function rgbToGrayFloat32(r: Float32Array, g: Float32Array, b: Float32Array, n: number): Float32Array {
@@ -419,6 +422,7 @@ function sampleCenter(
   r: Float32Array,
   g: Float32Array,
   b: Float32Array,
+  a: Float32Array,
   W: number,
   H: number,
   xCoords: number[],
@@ -439,10 +443,18 @@ function sampleCenter(
         Math.max(0, Math.round((xCoords[i]! + xCoords[i + 1]!) * 0.5)),
       )
       const si = cy * W + cx
-      data[o++] = r[si]!
-      data[o++] = g[si]!
-      data[o++] = b[si]!
-      data[o++] = 255
+      const aa = a[si]!
+      if (aa <= TRANSPARENT_ALPHA) {
+        data[o++] = 0
+        data[o++] = 0
+        data[o++] = 0
+        data[o++] = 0
+      } else {
+        data[o++] = r[si]!
+        data[o++] = g[si]!
+        data[o++] = b[si]!
+        data[o++] = aa
+      }
     }
   }
   return new ImageData(data, nx, ny)
@@ -452,6 +464,7 @@ function sampleMedian(
   r: Float32Array,
   g: Float32Array,
   b: Float32Array,
+  a: Float32Array,
   W: number,
   H: number,
   xCoords: number[],
@@ -460,7 +473,10 @@ function sampleMedian(
   const nx = xCoords.length - 1
   const ny = yCoords.length - 1
   const data = new Uint8ClampedArray(nx * ny * 4)
-  const buf: number[] = []
+  const rs: number[] = []
+  const gs: number[] = []
+  const bs: number[] = []
+  const alphas: number[] = []
   let o = 0
   for (let j = 0; j < ny; j++) {
     const y0 = Math.max(0, Math.min(H, Math.floor(yCoords[j]!)))
@@ -470,36 +486,47 @@ function sampleMedian(
       const x0 = Math.max(0, Math.min(W, Math.floor(xCoords[i]!)))
       let x1 = Math.max(0, Math.min(W, Math.floor(xCoords[i + 1]!)))
       if (x1 <= x0) x1 = Math.min(x0 + 1, W)
-      buf.length = 0
+      rs.length = 0
+      gs.length = 0
+      bs.length = 0
+      alphas.length = 0
       for (let y = y0; y < y1; y++) {
         for (let x = x0; x < x1; x++) {
           const si = y * W + x
-          buf.push(r[si]!, g[si]!, b[si]!)
+          const aa = a[si]!
+          alphas.push(aa)
+          if (aa > TRANSPARENT_ALPHA) {
+            rs.push(r[si]!)
+            gs.push(g[si]!)
+            bs.push(b[si]!)
+          }
         }
       }
-      if (buf.length === 0) {
+      if (alphas.length === 0 || rs.length === 0) {
         data[o] = 0
         data[o + 1] = 0
         data[o + 2] = 0
-        data[o + 3] = 255
+        data[o + 3] = 0
         o += 4
         continue
       }
-      const rs: number[] = []
-      const gs: number[] = []
-      const bs: number[] = []
-      for (let k = 0; k < buf.length; k += 3) {
-        rs.push(buf[k]!)
-        gs.push(buf[k + 1]!)
-        bs.push(buf[k + 2]!)
+      alphas.sort((x, y) => x - y)
+      const alpha = Math.round(medianSorted(alphas))
+      if (alpha <= TRANSPARENT_ALPHA) {
+        data[o] = 0
+        data[o + 1] = 0
+        data[o + 2] = 0
+        data[o + 3] = 0
+        o += 4
+        continue
       }
-      rs.sort((a, b) => a - b)
-      gs.sort((a, b) => a - b)
-      bs.sort((a, b) => a - b)
+      rs.sort((x, y) => x - y)
+      gs.sort((x, y) => x - y)
+      bs.sort((x, y) => x - y)
       data[o++] = Math.round(medianSorted(rs))
       data[o++] = Math.round(medianSorted(gs))
       data[o++] = Math.round(medianSorted(bs))
-      data[o++] = 255
+      data[o++] = alpha
     }
   }
   return new ImageData(data, nx, ny)
@@ -587,6 +614,7 @@ function sampleMajority(
   r: Float32Array,
   g: Float32Array,
   b: Float32Array,
+  a: Float32Array,
   W: number,
   H: number,
   xCoords: number[],
@@ -597,7 +625,8 @@ function sampleMajority(
   const ny = yCoords.length - 1
   const data = new Uint8ClampedArray(nx * ny * 4)
   const cellBuf = new Float32Array(maxSamples * 3)
-  const pixelList: number[] = []
+  const visiblePixels: number[] = []
+  const alphas: number[] = []
   let o = 0
 
   for (let j = 0; j < ny; j++) {
@@ -608,43 +637,52 @@ function sampleMajority(
       const x0 = Math.max(0, Math.min(W, Math.floor(xCoords[i]!)))
       let x1 = Math.max(0, Math.min(W, Math.floor(xCoords[i + 1]!)))
       if (x1 <= x0) x1 = Math.min(x0 + 1, W)
-      pixelList.length = 0
+      visiblePixels.length = 0
+      alphas.length = 0
+      let totalPixels = 0
       for (let y = y0; y < y1; y++) {
         for (let x = x0; x < x1; x++) {
-          pixelList.push(y * W + x)
+          totalPixels++
+          const si = y * W + x
+          const aa = a[si]!
+          if (aa > TRANSPARENT_ALPHA) {
+            visiblePixels.push(si)
+            alphas.push(aa)
+          }
         }
       }
-      const np = pixelList.length
-      if (np === 0) {
+      const visibleN = visiblePixels.length
+      if (totalPixels === 0 || visibleN === 0 || visibleN * 2 < totalPixels) {
         data[o] = 0
         data[o + 1] = 0
         data[o + 2] = 0
-        data[o + 3] = 255
+        data[o + 3] = 0
         o += 4
         continue
       }
-      let useN = np
-      if (np > maxSamples) {
+      let useN = visibleN
+      if (visibleN > maxSamples) {
         useN = maxSamples
         for (let s = 0; s < useN; s++) {
-          const pick = pixelList[Math.floor(Math.random() * np)]!
+          const pick = visiblePixels[Math.floor(Math.random() * visibleN)]!
           cellBuf[s * 3] = r[pick]!
           cellBuf[s * 3 + 1] = g[pick]!
           cellBuf[s * 3 + 2] = b[pick]!
         }
       } else {
-        for (let s = 0; s < np; s++) {
-          const pick = pixelList[s]!
+        for (let s = 0; s < visibleN; s++) {
+          const pick = visiblePixels[s]!
           cellBuf[s * 3] = r[pick]!
           cellBuf[s * 3 + 1] = g[pick]!
           cellBuf[s * 3 + 2] = b[pick]!
         }
       }
       const [rr, gg, bb] = kmeans2RgbCell(cellBuf.subarray(0, useN * 3), useN)
+      alphas.sort((x, y) => x - y)
       data[o++] = rr
       data[o++] = gg
       data[o++] = bb
-      data[o++] = 255
+      data[o++] = Math.round(medianSorted(alphas))
     }
   }
   return new ImageData(data, nx, ny)
@@ -749,7 +787,7 @@ export function getPerfectPixel(imageData: ImageData, opts: PerfectPixelOptions 
   const refineIntensity = opts.refineIntensity ?? 0.25
   const fixSquare = opts.fixSquare ?? true
 
-  const { r, g, b, w, h } = rgbaToRgbFloat(imageData)
+  const { r, g, b, a, w, h } = rgbaToRgbaFloat(imageData)
   const gray = rgbToGrayFloat32(r, g, b, w * h)
 
   let sizeX: number
@@ -770,11 +808,11 @@ export function getPerfectPixel(imageData: ImageData, opts: PerfectPixelOptions 
 
   let out: ImageData
   if (sampleMethod === 'majority') {
-    out = sampleMajority(r, g, b, W, H, xCoords, yCoords)
+    out = sampleMajority(r, g, b, a, W, H, xCoords, yCoords)
   } else if (sampleMethod === 'median') {
-    out = sampleMedian(r, g, b, W, H, xCoords, yCoords)
+    out = sampleMedian(r, g, b, a, W, H, xCoords, yCoords)
   } else {
-    out = sampleCenter(r, g, b, W, H, xCoords, yCoords)
+    out = sampleCenter(r, g, b, a, W, H, xCoords, yCoords)
   }
 
   return fixSquareOutput(out, fixSquare)
