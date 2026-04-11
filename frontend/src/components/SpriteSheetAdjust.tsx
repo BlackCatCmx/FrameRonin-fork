@@ -240,6 +240,20 @@ function loadImageElement(src: string): Promise<HTMLImageElement> {
   })
 }
 
+function createTransparentFrameUrl(width: number, height: number): Promise<string> {
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.max(1, Math.floor(width))
+  canvas.height = Math.max(1, Math.floor(height))
+  const ctx = canvas.getContext('2d')
+  ctx?.clearRect(0, 0, canvas.width, canvas.height)
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(URL.createObjectURL(blob))
+      else reject(new Error('canvas'))
+    }, 'image/png')
+  })
+}
+
 /** RoninPro：单图网格拆分与整图均分功能重叠且易混淆；暂隐藏第三项，改为 true 恢复 */
 const SHEET_PRO_GRID_SPLIT_VISIBLE = false
 
@@ -330,6 +344,7 @@ export default function SpriteSheetAdjust({ integratedSplit = false }: SpriteShe
   const [recombinedParams, setRecombinedParams] = useState<{ cellW: number; cellH: number } | null>(null)
   const [recombining, setRecombining] = useState(false)
   const [applyProgress, setApplyProgress] = useState<number | null>(null)
+  const [addingBlankFrame, setAddingBlankFrame] = useState(false)
 
   const gridCols = integratedSplit ? layoutCols : cols
   const gridRows = integratedSplit ? layoutRows : rows
@@ -1358,6 +1373,32 @@ export default function SpriteSheetAdjust({ integratedSplit = false }: SpriteShe
     [frameUrls.length, sheetInputMode],
   )
 
+  const addIntegratedBlankFrame = useCallback(async () => {
+    if (!integratedSplit || frameUrls.length === 0) return
+    setAddingBlankFrame(true)
+    try {
+      const refSize =
+        naturalSizes[0] ??
+        (await (async () => {
+          const img = await loadImageElement(frameUrls[0]!)
+          return { w: img.naturalWidth, h: img.naturalHeight }
+        })())
+      const blankUrl = await createTransparentFrameUrl(refSize.w, refSize.h)
+      pendingIntrinsicSizesRef.current =
+        naturalSizes.length === frameUrls.length ? [...naturalSizes, refSize] : null
+      setFrameUrls((prev) => [...prev, blankUrl])
+      setFrameOffsets((prev) => [...prev, { dx: 0, dy: 0 }])
+      setFrameCrops((prev) => [...prev, emptyCrop()])
+      setSelected((prev) => [...prev, true])
+      setFramePressCounts((prev) => [...prev, { up: 0, down: 0, left: 0, right: 0 }])
+      setNaturalSizes((prev) => (prev.length === frameUrls.length ? [...prev, refSize] : prev))
+    } catch (e) {
+      message.error(t('imagesToSingleAddBlankFailed') + ': ' + String(e))
+    } finally {
+      setAddingBlankFrame(false)
+    }
+  }, [integratedSplit, frameUrls, naturalSizes, t])
+
   return (
     <div className="sprite-adjust-module">
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
@@ -1627,6 +1668,13 @@ export default function SpriteSheetAdjust({ integratedSplit = false }: SpriteShe
                       onChange={(v) => onIntegratedPreviewColsChange(v ?? layoutCols)}
                       style={{ width: 72 }}
                     />
+                    <Button
+                      icon={<PlusOutlined />}
+                      onClick={addIntegratedBlankFrame}
+                      loading={addingBlankFrame}
+                    >
+                      {t('imagesToSingleAddBlank')}
+                    </Button>
                     <Text type="secondary">{t('sheetProRowsAuto', { rows: layoutRows, n: frameUrls.length })}</Text>
                   </Space>
                   <Text type="secondary" style={{ fontSize: 12 }}>{t('sheetProSplitPreviewManageHint')}</Text>

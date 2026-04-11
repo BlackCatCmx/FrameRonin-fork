@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Button, InputNumber, message, Radio, Slider, Space, Tabs, Tooltip, Typography, Upload } from 'antd'
-import { CaretLeftOutlined, CaretRightOutlined, DeleteOutlined, DownloadOutlined, DragOutlined, FileImageOutlined, LayoutOutlined, PictureOutlined, MergeCellsOutlined } from '@ant-design/icons'
+import { CaretLeftOutlined, CaretRightOutlined, DeleteOutlined, DownloadOutlined, DragOutlined, FileImageOutlined, LayoutOutlined, PictureOutlined, MergeCellsOutlined, PlusOutlined } from '@ant-design/icons'
 import type { UploadFile } from 'antd'
 import { parseGIF, decompressFrames } from 'gifuct-js'
 // @ts-expect-error gifenc has no types
@@ -62,6 +62,26 @@ function compositeFrame(
   return buf
 }
 
+function loadImageElement(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve(img)
+    img.onerror = () => reject(new Error('load'))
+    img.src = src
+  })
+}
+
+function createTransparentPngBlob(width: number, height: number): Promise<Blob> {
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.max(1, Math.floor(width))
+  canvas.height = Math.max(1, Math.floor(height))
+  const ctx = canvas.getContext('2d')
+  ctx?.clearRect(0, 0, canvas.width, canvas.height)
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('canvas'))), 'image/png')
+  })
+}
+
 export default function GifFrameConverter() {
   const { t } = useLanguage()
   const [activeTab, setActiveTab] = useState<'gif2frames' | 'frames2gif' | 'images2single' | 'simpleStitch'>('images2single')
@@ -108,6 +128,7 @@ export default function GifFrameConverter() {
   const [cropRight, setCropRight] = useState(0)
   const [cropPreviewIndex, setCropPreviewIndex] = useState(0)
   const [firstImageSize, setFirstImageSize] = useState<{ w: number; h: number } | null>(null)
+  const [addingBlankFrame, setAddingBlankFrame] = useState(false)
 
   const [stitchFiles, setStitchFiles] = useState<File[]>([])
   const [stitchInputUrls, setStitchInputUrls] = useState<string[]>([])
@@ -320,6 +341,32 @@ export default function GifFrameConverter() {
       message.error(t('imagesToSingleFailed') + ': ' + String(e))
     } finally {
       setLoading(false)
+    }
+  }
+
+  const addBlankCombineFrame = async () => {
+    if (combineFiles.length === 0) return
+    setAddingBlankFrame(true)
+    try {
+      const refSize =
+        firstImageSize ??
+        (await (async () => {
+          const url = URL.createObjectURL(combineFiles[0]!)
+          try {
+            const img = await loadImageElement(url)
+            return { w: img.naturalWidth, h: img.naturalHeight }
+          } finally {
+            URL.revokeObjectURL(url)
+          }
+        })())
+      const blob = await createTransparentPngBlob(refSize.w, refSize.h)
+      const nextIndex = combineFiles.length + 1
+      const blankFile = new File([blob], `blank_${String(nextIndex).padStart(3, '0')}.png`, { type: 'image/png' })
+      setCombineFiles((prev) => [...prev, blankFile])
+    } catch (e) {
+      message.error(t('imagesToSingleAddBlankFailed') + ': ' + String(e))
+    } finally {
+      setAddingBlankFrame(false)
     }
   }
 
@@ -926,6 +973,14 @@ export default function GifFrameConverter() {
                 <Space wrap align="center" style={{ marginBottom: 12 }}>
                   <Text type="secondary">{t('imagesToSingleCols')}:</Text>
                   <InputNumber min={1} max={64} value={combineCols} onChange={(v) => setCombineCols(v ?? 4)} style={{ width: 72 }} />
+                  <Button
+                    icon={<PlusOutlined />}
+                    onClick={addBlankCombineFrame}
+                    disabled={combineFiles.length === 0}
+                    loading={addingBlankFrame}
+                  >
+                    {t('imagesToSingleAddBlank')}
+                  </Button>
                 </Space>
                 <Space wrap align="center" style={{ marginBottom: 12 }}>
                   <Text type="secondary">{t('imagesToSingleInputMode')}:</Text>
