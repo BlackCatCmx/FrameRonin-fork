@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { CloseOutlined, DownloadOutlined, FolderAddOutlined, FolderOpenOutlined, InboxOutlined, LeftOutlined, PlusOutlined, ReloadOutlined, RightOutlined } from '@ant-design/icons'
 import { message, Spin } from 'antd'
-import { useAuth } from '../auth/context'
 import { canUseLocalWorkspace, useLocalWorkspace } from '../localWorkspace/context'
 import { useImageStash } from '../stash/context'
 import { useLanguage } from '../i18n/context'
@@ -18,7 +17,6 @@ function downloadImage(url: string, name?: string) {
 
 export default function ImageStashPanel() {
   const { t } = useLanguage()
-  const { isConnected } = useAuth()
   const { items, addImage, removeImage, clearAll } = useImageStash()
   const {
     folderName,
@@ -196,7 +194,7 @@ export default function ImageStashPanel() {
           </div>
           <div className="image-stash-header">
             <InboxOutlined />
-            {isConnected && <span className="image-stash-session-badge" title={t('stashSessionPersist')}>●</span>}
+            {isStashMode && <span className="image-stash-session-badge" title={t('stashSessionPersist')}>●</span>}
             {canUseLocalWorkspace && (
               <div className="image-stash-mode-toggle" role="group" aria-label={t('stashModeToggle')}>
                 <button

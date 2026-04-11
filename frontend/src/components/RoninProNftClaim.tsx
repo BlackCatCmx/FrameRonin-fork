@@ -20,6 +20,10 @@ export default function RoninProNftClaim() {
     data: string,
     setLoading: (v: boolean) => void,
   ) => {
+    if (!address) {
+      message.info(t('roninProNftClaimLeadDisconnected'))
+      return
+    }
     setLoading(true)
     try {
       const hash = await sendRoninTransaction({
@@ -80,7 +84,7 @@ export default function RoninProNftClaim() {
                 type="secondary"
                 style={{ marginBottom: 0, marginTop: 8 }}
               >
-                {t('roninProNftClaimLead')}
+                {address ? t('roninProNftClaimLead') : t('roninProNftClaimLeadDisconnected')}
               </Typography.Paragraph>
             </div>
 
@@ -97,6 +101,7 @@ export default function RoninProNftClaim() {
                     setNftLoading,
                   )
                 }
+                disabled={!address}
                 block
                 style={{ marginTop: 12 }}
               >
@@ -116,6 +121,7 @@ export default function RoninProNftClaim() {
                     setFrameLoading,
                   )
                 }
+                disabled={!address}
                 block
                 style={{ marginTop: 12 }}
               >

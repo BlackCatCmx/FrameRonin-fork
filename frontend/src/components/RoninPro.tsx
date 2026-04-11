@@ -8,23 +8,19 @@ import {
   ExpandOutlined,
   ForkOutlined,
   GiftOutlined,
-  LockOutlined,
   MergeCellsOutlined,
   ScissorOutlined,
 } from '@ant-design/icons'
-import { useAuth } from '../auth/context'
-import { RONIN_PRO_REQUIRE_NFT } from '../config/features'
-import { useNftOwnership } from '../hooks/useNftOwnership'
 import { useLanguage } from '../i18n/context'
+import RoninProAdvancedPixel from './RoninProAdvancedPixel'
 import RoninProCustomScale from './RoninProCustomScale'
 import RoninProCustomSlice from './RoninProCustomSlice'
-import RoninProUnifySize from './RoninProUnifySize'
-import RoninProAdvancedPixel from './RoninProAdvancedPixel'
 import RoninProCustomWorkflow from './RoninProCustomWorkflow'
+import RoninProDuplicateFrames from './RoninProDuplicateFrames'
 import RoninProNftClaim from './RoninProNftClaim'
 import RoninProRseprite from './RoninProRseprite'
-import RoninProDuplicateFrames from './RoninProDuplicateFrames'
 import RoninProSheetPro from './RoninProSheetPro'
+import RoninProUnifySize from './RoninProUnifySize'
 
 const ACCENT = '#b55233'
 const ICON_BOX = 44
@@ -82,10 +78,8 @@ const RONIN_FEATURE_ENTRIES = [
 
 interface RoninProProps {
   onBack?: () => void
-  /** 外部一次性格子模块（如首页快捷键），进入后由 onDeepLinkConsumed 清空 */
   deepLinkFeature?: string | null
   onDeepLinkConsumed?: () => void
-  /** 蓝图批量结果图右键「发送到精细处理」 */
   onSendToFineProcess?: (blob: Blob, suggestedFilename: string) => void
 }
 
@@ -96,8 +90,6 @@ export default function RoninPro({
   onSendToFineProcess,
 }: RoninProProps) {
   const { t } = useLanguage()
-  const { address, isConnected } = useAuth()
-  const ownsNft = useNftOwnership(RONIN_PRO_REQUIRE_NFT ? address : null)
   const [activeFeature, setActiveFeature] = useState<string | null>(null)
 
   useEffect(() => {
@@ -106,67 +98,7 @@ export default function RoninPro({
     onDeepLinkConsumed?.()
   }, [deepLinkFeature, onDeepLinkConsumed])
 
-  /** 单图调整 Pro：仅首页快捷键 N 进入；首帧深链尚未写入 state 时也要能显示 */
   const displayedFeature = deepLinkFeature === 'sheetPro' ? 'sheetPro' : activeFeature
-  /** 该子模块不对登录 / NFT 做限制（与 RoninPro 其余功能区分） */
-  const skipRoninGate = displayedFeature === 'sheetPro'
-
-  if (!skipRoninGate && !isConnected) {
-    return (
-      <div style={{ padding: 24 }}>
-        {onBack && (
-          <div style={{ marginBottom: 16 }}>
-            <Button type="text" icon={<ArrowLeftOutlined />} onClick={onBack}>
-              {t('backToHome')}
-            </Button>
-          </div>
-        )}
-        <div style={{ textAlign: 'center', padding: 48 }}>
-          <LockOutlined style={{ fontSize: 48, color: '#b55233', marginBottom: 16 }} />
-          <Typography.Title level={4}>{t('roninProRequireLogin')}</Typography.Title>
-          <Typography.Text type="secondary">{t('roninProRequireLoginDesc')}</Typography.Text>
-        </div>
-      </div>
-    )
-  }
-
-  if (!skipRoninGate && RONIN_PRO_REQUIRE_NFT && ownsNft === false) {
-    return (
-      <div style={{ padding: 24 }}>
-        {onBack && (
-          <div style={{ marginBottom: 16 }}>
-            <Button type="text" icon={<ArrowLeftOutlined />} onClick={onBack}>
-              {t('backToHome')}
-            </Button>
-          </div>
-        )}
-        <div style={{ textAlign: 'center', padding: 48 }}>
-          <LockOutlined style={{ fontSize: 48, color: '#b55233', marginBottom: 16 }} />
-          <Typography.Title level={4}>{t('roninProRequireNft')}</Typography.Title>
-          <Typography.Text type="secondary">{t('roninProRequireNftDesc')}</Typography.Text>
-        </div>
-      </div>
-    )
-  }
-
-  if (!skipRoninGate && RONIN_PRO_REQUIRE_NFT && ownsNft === null) {
-    return (
-      <div style={{ padding: 24 }}>
-        {onBack && (
-          <div style={{ marginBottom: 16 }}>
-            <Button type="text" icon={<ArrowLeftOutlined />} onClick={onBack}>
-              {t('backToHome')}
-            </Button>
-          </div>
-        )}
-        <div style={{ textAlign: 'center', padding: 48 }}>
-          <Typography.Text type="secondary">{t('roninProChecking')}</Typography.Text>
-        </div>
-      </div>
-    )
-  }
-
-  /** 自定义流程蓝图需要更大画布：接近视口宽；其它子页保持常规宽度 */
   const shellMaxWidth =
     displayedFeature === 'customWorkflow' || displayedFeature === 'rseprite' || displayedFeature === 'sheetPro'
       ? 'min(calc(100vw - 40px), 1920px)'
@@ -192,11 +124,7 @@ export default function RoninPro({
         }}
       >
         {displayedFeature ? (
-          <Button
-            type="text"
-            icon={<ArrowLeftOutlined />}
-            onClick={() => setActiveFeature(null)}
-          >
+          <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => setActiveFeature(null)}>
             {t('roninProBack')}
           </Button>
         ) : onBack ? (

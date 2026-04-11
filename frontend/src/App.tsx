@@ -5,7 +5,7 @@ import zhCN from 'antd/locale/zh_CN'
 import enUS from 'antd/locale/en_US'
 import jaJP from 'antd/locale/ja_JP'
 import type { ThemeConfig } from 'antd'
-import { AuthProvider, useAuth } from './auth/context'
+import { AuthProvider } from './auth/context'
 import { LocalWorkspaceProvider } from './localWorkspace/context'
 import { ImageStashProvider } from './stash/context'
 import { useLanguage } from './i18n/context'
@@ -53,8 +53,6 @@ export type Step = 'upload' | 'params'
 const STEP_KEYS: Step[] = ['upload', 'params']
 
 function AppHeaderRight({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }) {
-  const { t } = useLanguage()
-  const { isConnected } = useAuth()
   return (
     <>
       <div className="app-header-lang">
@@ -69,7 +67,6 @@ function AppHeaderRight({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => v
           </button>
         ))}
       </div>
-      {!isConnected && <span className="app-header-ronin-hint">{t('roninLoginHint')}</span>}
       <RoninLoginButton />
     </>
   )

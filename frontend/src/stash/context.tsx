@@ -2,11 +2,9 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useId,
   useState,
 } from 'react'
-import { useAuth } from '../auth/context'
 
 export interface StashItem {
   id: string
@@ -58,52 +56,35 @@ interface ImageStashContextValue {
 const ImageStashContext = createContext<ImageStashContextValue | null>(null)
 
 export function ImageStashProvider({ children }: { children: React.ReactNode }) {
-  const { isConnected } = useAuth()
-  const [items, setItems] = useState<StashItem[]>(() =>
-    isConnected ? loadFromSession() : []
-  )
+  const [items, setItems] = useState<StashItem[]>(() => loadFromSession())
   const idSeed = useId()
-
-  useEffect(() => {
-    if (isConnected) {
-      setItems(loadFromSession())
-    } else {
-      setItems([])
-    }
-  }, [isConnected])
-
-  useEffect(() => {
-    if (isConnected && items.length > 0) {
-      saveToSession(items)
-    } else if (isConnected && items.length === 0) {
-      try {
-        sessionStorage.removeItem(STORAGE_KEY)
-      } catch {
-        /* ignore */
-      }
-    }
-  }, [isConnected, items])
 
   const addImage = useCallback(
     async (url: string, name?: string) => {
       const id = `${idSeed}-${Date.now()}-${Math.random().toString(36).slice(2)}`
       let persistUrl: string
-      if (isConnected && url.startsWith('blob:')) {
+      if (url.startsWith('blob:')) {
         persistUrl = await urlToDataUrl(url).catch(() => url)
         if (persistUrl !== url) URL.revokeObjectURL(url)
       } else {
         persistUrl = url
       }
-      setItems((prev) => [...prev, { id, url: persistUrl, name }])
+      setItems((prev) => {
+        const next = [...prev, { id, url: persistUrl, name }]
+        saveToSession(next)
+        return next
+      })
     },
-    [idSeed, isConnected]
+    [idSeed]
   )
 
   const removeImage = useCallback((id: string) => {
     setItems((prev) => {
       const item = prev.find((i) => i.id === id)
       if (item?.url.startsWith('blob:')) URL.revokeObjectURL(item.url)
-      return prev.filter((i) => i.id !== id)
+      const next = prev.filter((i) => i.id !== id)
+      saveToSession(next)
+      return next
     })
   }, [])
 
@@ -112,6 +93,7 @@ export function ImageStashProvider({ children }: { children: React.ReactNode }) 
       prev.forEach((i) => {
         if (i.url.startsWith('blob:')) URL.revokeObjectURL(i.url)
       })
+      saveToSession([])
       return []
     })
   }, [])
