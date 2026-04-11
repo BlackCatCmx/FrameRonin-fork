@@ -10,9 +10,11 @@ import {
   GiftOutlined,
   MergeCellsOutlined,
   ScissorOutlined,
+  SoundOutlined,
 } from '@ant-design/icons'
 import { useLanguage } from '../i18n/context'
 import RoninProAdvancedPixel from './RoninProAdvancedPixel'
+import RoninProAudioCompress from './RoninProAudioCompress'
 import RoninProCustomScale from './RoninProCustomScale'
 import RoninProCustomSlice from './RoninProCustomSlice'
 import RoninProCustomWorkflow from './RoninProCustomWorkflow'
@@ -43,6 +45,12 @@ const RONIN_FEATURE_ENTRIES = [
     Icon: ExpandOutlined,
     titleKey: 'roninProCustomScale',
     descKey: 'roninProCustomScaleHint',
+  },
+  {
+    id: 'audioCompress' as const,
+    Icon: SoundOutlined,
+    titleKey: 'roninProAudioCompress',
+    descKey: 'roninProAudioCompressCardDesc',
   },
   {
     id: 'unifySize' as const,
@@ -243,6 +251,8 @@ export default function RoninPro({
         <RoninProCustomSlice />
       ) : displayedFeature === 'customScale' ? (
         <RoninProCustomScale />
+      ) : displayedFeature === 'audioCompress' ? (
+        <RoninProAudioCompress />
       ) : displayedFeature === 'unifySize' ? (
         <RoninProUnifySize />
       ) : displayedFeature === 'duplicateFrames' ? (
