@@ -973,14 +973,6 @@ export default function GifFrameConverter() {
                 <Space wrap align="center" style={{ marginBottom: 12 }}>
                   <Text type="secondary">{t('imagesToSingleCols')}:</Text>
                   <InputNumber min={1} max={64} value={combineCols} onChange={(v) => setCombineCols(v ?? 4)} style={{ width: 72 }} />
-                  <Button
-                    icon={<PlusOutlined />}
-                    onClick={addBlankCombineFrame}
-                    disabled={combineFiles.length === 0}
-                    loading={addingBlankFrame}
-                  >
-                    {t('imagesToSingleAddBlank')}
-                  </Button>
                 </Space>
                 <Space wrap align="center" style={{ marginBottom: 12 }}>
                   <Text type="secondary">{t('imagesToSingleInputMode')}:</Text>
@@ -1270,6 +1262,16 @@ export default function GifFrameConverter() {
                         ))}
                       </div>
                     </div>
+                    <Space style={{ marginTop: 12 }}>
+                      <Button
+                        icon={<PlusOutlined />}
+                        onClick={addBlankCombineFrame}
+                        disabled={combineFiles.length === 0}
+                        loading={addingBlankFrame}
+                      >
+                        {t('imagesToSingleAddBlank')}
+                      </Button>
+                    </Space>
                   </>
                 )}
                 <Space wrap style={{ marginTop: 16 }} align="center">

@@ -27,6 +27,12 @@ const ICON_BOX = 44
 
 const RONIN_FEATURE_ENTRIES = [
   {
+    id: 'sheetPro' as const,
+    Icon: AppstoreOutlined,
+    titleKey: 'roninProSheetPro',
+    descKey: 'roninProSheetProHint',
+  },
+  {
     id: 'customSlice' as const,
     Icon: ScissorOutlined,
     titleKey: 'roninProCustomSlice',
