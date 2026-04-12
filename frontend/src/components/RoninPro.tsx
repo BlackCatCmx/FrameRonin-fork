@@ -21,6 +21,7 @@ import RoninProCustomWorkflow from './RoninProCustomWorkflow'
 import RoninProDuplicateFrames from './RoninProDuplicateFrames'
 import RoninProNftClaim from './RoninProNftClaim'
 import RoninProRseprite from './RoninProRseprite'
+import RoninProScatterSlice from './RoninProScatterSlice'
 import RoninProSheetPro from './RoninProSheetPro'
 import RoninProUnifySize from './RoninProUnifySize'
 
@@ -33,6 +34,12 @@ const RONIN_FEATURE_ENTRIES = [
     Icon: AppstoreOutlined,
     titleKey: 'roninProSheetPro',
     descKey: 'roninProSheetProHint',
+  },
+  {
+    id: 'scatterSlice' as const,
+    Icon: ScissorOutlined,
+    titleKey: 'roninProScatterSlice',
+    descKey: 'roninProScatterSliceDesc',
   },
   {
     id: 'customSlice' as const,
@@ -114,7 +121,7 @@ export default function RoninPro({
 
   const displayedFeature = deepLinkFeature === 'sheetPro' ? 'sheetPro' : activeFeature
   const shellMaxWidth =
-    displayedFeature === 'customWorkflow' || displayedFeature === 'rseprite' || displayedFeature === 'sheetPro'
+    displayedFeature === 'customWorkflow' || displayedFeature === 'rseprite' || displayedFeature === 'sheetPro' || displayedFeature === 'scatterSlice'
       ? 'min(calc(100vw - 40px), 1920px)'
       : 1200
 
@@ -249,6 +256,8 @@ export default function RoninPro({
         </div>
       ) : displayedFeature === 'customSlice' ? (
         <RoninProCustomSlice />
+      ) : displayedFeature === 'scatterSlice' ? (
+        <RoninProScatterSlice />
       ) : displayedFeature === 'customScale' ? (
         <RoninProCustomScale />
       ) : displayedFeature === 'audioCompress' ? (
