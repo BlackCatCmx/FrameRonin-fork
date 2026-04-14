@@ -56,29 +56,6 @@ const GEM_CHAR_V2_2_SAMPLE_URL = `${import.meta.env.BASE_URL}gempic/${encodeURIC
 const GEM_CHAR_V23OT_SAMPLE_URL = `${import.meta.env.BASE_URL}gempic/${encodeURIComponent('v2.3ot案例.gif')}`
 const GEM_CHAR_V3_SAMPLE_URL = `${import.meta.env.BASE_URL}gempic/${encodeURIComponent('常规角色V3案例.gif')}`
 
-/** 游戏手柄图标 */
-function GamepadIcon({ style }: { style?: CSSProperties }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="1em"
-      height="1em"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={{ display: 'block', fontSize: 54, color: '#b55233', marginBottom: 12, marginLeft: 'auto', marginRight: 'auto', ...style }}
-    >
-      <path d="M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8z" />
-      <path d="M8 10v4M6 12h4" />
-      <circle cx="16" cy="10" r="1.2" />
-      <circle cx="18" cy="12" r="1.2" />
-      <circle cx="16" cy="14" r="1.2" />
-    </svg>
-  )
-}
-
 export type AppMode =
   | 'video'
   | 'image'
@@ -95,6 +72,7 @@ export type AppMode =
   | 'controlTest'
   | 'controlTestArcade'
   | 'roninPro'
+  | 'mapStitch'
   | 'infiniteMap'
   | 'aiPixelAnimals'
   | 'gemPixelPotpourri'
@@ -112,11 +90,9 @@ export default function ModeSelector({ onSelect }: Props) {
         <Col xs={24} sm={12} md={6} style={{ display: 'flex' }}>
           <Card
             hoverable
-            onClick={() => onSelect('controlTest')}
             styles={{ body: HOME_CARD_BODY_LARGE }}
             style={{
               textAlign: 'center',
-              cursor: 'pointer',
               borderColor: '#9a8b78',
               background: 'linear-gradient(135deg, #ede6dc 0%, #e8dfd4 100%)',
               borderWidth: 2,
@@ -127,14 +103,22 @@ export default function ModeSelector({ onSelect }: Props) {
           >
             <ControlOutlined style={{ fontSize: 36, color: '#b55233', marginBottom: 12, display: 'block' }} />
             <div style={{ lineHeight: 1.4 }}>
-              <Text strong style={{ fontSize: 15 }}>{t('moduleControlTestTopdown')}</Text>
+              <Text strong style={{ fontSize: 15 }}>{t('moduleControlTest')}</Text>
             </div>
+            <Space size="small" style={{ marginTop: 12, justifyContent: 'center', width: '100%', alignSelf: 'stretch' }} wrap>
+              <Button type="primary" size="small" onClick={() => onSelect('controlTest')}>
+                {t('moduleControlTestTopdown')}
+              </Button>
+              <Button type="primary" size="small" onClick={() => onSelect('controlTestArcade')}>
+                {t('moduleControlTestArcade')}
+              </Button>
+            </Space>
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6} style={{ display: 'flex' }}>
           <Card
             hoverable
-            onClick={() => onSelect('controlTestArcade')}
+            onClick={() => onSelect('mapStitch')}
             styles={{ body: HOME_CARD_BODY_LARGE }}
             style={{
               textAlign: 'center',
@@ -147,9 +131,9 @@ export default function ModeSelector({ onSelect }: Props) {
               width: '100%',
             }}
           >
-            <GamepadIcon />
+            <EnvironmentOutlined style={{ fontSize: 36, color: '#b55233', marginBottom: 12, display: 'block' }} />
             <div style={{ lineHeight: 1.4 }}>
-              <Text strong style={{ fontSize: 15 }}>{t('moduleControlTestArcade')}</Text>
+              <Text strong style={{ fontSize: 15 }}>{t('moduleMapStitch')}</Text>
             </div>
           </Card>
         </Col>

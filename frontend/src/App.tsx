@@ -29,6 +29,7 @@ import RoninPro from './components/RoninPro'
 import AiPixelAnimalsHub from './components/AiPixelAnimalsHub'
 import GemPixelPotpourriHub from './components/GemPixelPotpourriHub'
 import InfiniteMapPlaceholder from './components/InfiniteMapPlaceholder'
+import MapStitch from './components/MapStitch'
 
 const ImageMatte = lazy(() => import('./components/ImageMatte'))
 import ParamsStep from './components/ParamsStep'
@@ -307,6 +308,13 @@ function App() {
           style={
             mode === 'spriteadjust'
               ? { maxWidth: 1120, width: '100%' }
+              : mode === 'mapStitch'
+                ? {
+                    width: '100%',
+                    maxWidth: 'none',
+                    margin: 0,
+                    padding: 0,
+                  }
               : mode === 'infiniteMap'
                 ? {
                     width: '80%',
@@ -517,6 +525,8 @@ function App() {
                 }}
               />
             </Card>
+          ) : mode === 'mapStitch' ? (
+            <MapStitch onBack={() => setMode(null)} />
           ) : mode === 'infiniteMap' ? (
             <InfiniteMapPlaceholder onBack={() => setMode(null)} />
           ) : mode === 'aiPixelAnimals' ? (
