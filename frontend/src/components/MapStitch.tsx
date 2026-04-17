@@ -48,10 +48,16 @@ const MIN_ZOOM = 0.05
 const MAX_ZOOM = 8
 const WHEEL_ZOOM_SENSITIVITY = 0.0015
 const GENERATE_STITCH_URL = 'https://gemini.google.com/gem/1lJTnukifhxITzO7l084Icn3Q_ctIID9g?usp=sharing'
+const STATE_ARCHIVE_VERSION = 2
+const STATE_MANIFEST_NAME = 'map_stitch_state.json'
 
 type SavedImageState = {
   fileName?: string
   type?: string
+  size?: number
+  width?: number
+  height?: number
+  path?: string
   dataUrl?: string
 }
 
@@ -230,13 +236,12 @@ function FeatheredPreviewImage({
   feather: Feather
   alt: string
 }) {
-  const [url, setUrl] = useState(upload.url)
+  const hasFeather = feather.top !== 0 || feather.right !== 0 || feather.bottom !== 0 || feather.left !== 0
+  const previewKey = `${upload.url}:${width}:${height}:${feather.top}:${feather.right}:${feather.bottom}:${feather.left}`
+  const [generatedPreview, setGeneratedPreview] = useState<{ key: string; url: string } | null>(null)
 
   useEffect(() => {
-    if (feather.top === 0 && feather.right === 0 && feather.bottom === 0 && feather.left === 0) {
-      setUrl(upload.url)
-      return
-    }
+    if (!hasFeather) return
 
     let revokedUrl: string | null = null
     let cancelled = false
@@ -244,16 +249,17 @@ function FeatheredPreviewImage({
     canvas.toBlob((blob) => {
       if (!blob || cancelled) return
       revokedUrl = URL.createObjectURL(blob)
-      setUrl(revokedUrl)
+      setGeneratedPreview({ key: previewKey, url: revokedUrl })
     }, 'image/png')
 
     return () => {
       cancelled = true
       if (revokedUrl) URL.revokeObjectURL(revokedUrl)
     }
-  }, [alt, feather.bottom, feather.left, feather.right, feather.top, height, upload, width])
+  }, [feather, hasFeather, height, previewKey, upload.image, width])
 
-  return <img src={url} alt={alt} />
+  const src = hasFeather && generatedPreview?.key === previewKey ? generatedPreview.url : upload.url
+  return <img src={src} alt={alt} />
 }
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -268,15 +274,6 @@ function downloadBlob(blob: Blob, filename: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 30_000)
 }
 
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result ?? ''))
-    reader.onerror = () => reject(reader.error ?? new Error('文件读取失败'))
-    reader.readAsDataURL(file)
-  })
-}
-
 function dataUrlToFile(dataUrl: string, fileName: string, fallbackType = 'image/png'): File {
   const [meta = '', payload = ''] = dataUrl.split(',', 2)
   if (!payload) throw new Error('拼接状态中的图片数据不完整')
@@ -285,6 +282,45 @@ function dataUrlToFile(dataUrl: string, fileName: string, fallbackType = 'image/
   const bytes = new Uint8Array(binary.length)
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
   return new File([bytes], fileName, { type: mime })
+}
+
+function fileExtensionFor(file: File): string {
+  const fromName = file.name.match(/\.[a-z0-9]+$/i)?.[0]?.toLowerCase()
+  if (fromName && ['.png', '.jpg', '.jpeg', '.webp'].includes(fromName)) return fromName
+  if (file.type === 'image/jpeg') return '.jpg'
+  if (file.type === 'image/webp') return '.webp'
+  return '.png'
+}
+
+function uniqueArchiveImagePath(used: Set<string>, baseName: string, file: File): string {
+  const ext = fileExtensionFor(file)
+  const safeBase = safeFilename(baseName.replace(/\.[^.]+$/, ''))
+  let index = 0
+  let name = `${safeBase}${ext}`
+  while (used.has(`images/${name}`)) {
+    index += 1
+    name = `${safeBase}_${index}${ext}`
+  }
+  const path = `images/${name}`
+  used.add(path)
+  return path
+}
+
+async function savedImageStateToFile(
+  image: SavedImageState | undefined,
+  fallbackName: string,
+  zip?: JSZip,
+): Promise<File> {
+  if (!image) throw new Error('拼接状态缺少图片数据')
+  if (image.dataUrl) return dataUrlToFile(image.dataUrl, image.fileName || fallbackName, image.type || 'image/png')
+  if (!image.path || !zip) throw new Error('拼接状态中的图片引用无效')
+
+  const entry = zip.file(image.path)
+  if (!entry) throw new Error(`拼接状态缺少图片文件：${image.path}`)
+  const blob = await entry.async('blob')
+  return new File([blob], image.fileName || image.path.split('/').pop() || fallbackName, {
+    type: image.type || blob.type || 'image/png',
+  })
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -1052,36 +1088,36 @@ export default function MapStitch({ onBack }: Props) {
   const downloadEditStateJson = async () => {
     if (!source) return
     try {
-      const uploads = await Promise.all(
-        Object.entries(tileUploads).map(async ([key, upload]) => {
-          if (!upload) return null
-          return [
-            key,
-            {
-              fileName: upload.file.name,
-              type: upload.file.type,
-              size: upload.file.size,
-              width: upload.width,
-              height: upload.height,
-              dataUrl: await fileToDataUrl(upload.file),
-            },
-          ] as const
-        }),
-      )
+      const zip = new JSZip()
+      const imageFolder = zip.folder('images')
+      if (!imageFolder) throw new Error('拼接状态图片目录创建失败')
+
+      const usedImagePaths = new Set<string>()
+      const addImageToArchive = (image: LoadedImage, baseName: string): SavedImageState => {
+        const path = uniqueArchiveImagePath(usedImagePaths, baseName, image.file)
+        imageFolder.file(path.replace(/^images\//, ''), image.file)
+        return {
+          fileName: image.file.name,
+          type: image.file.type,
+          size: image.file.size,
+          width: image.width,
+          height: image.height,
+          path,
+        }
+      }
+
+      const uploads = Object.entries(tileUploads).flatMap(([key, upload]) => {
+        if (!upload) return []
+        return [[key, addImageToArchive(upload, `tile_${key.replace(',', '_')}_${upload.file.name}`)] as const]
+      })
 
       const state = {
-        version: 1,
+        version: STATE_ARCHIVE_VERSION,
         savedAt: new Date().toISOString(),
-        source: {
-          fileName: source.file.name,
-          type: source.file.type,
-          size: source.file.size,
-          width: source.width,
-          height: source.height,
-          dataUrl: await fileToDataUrl(source.file),
-        },
+        format: 'pixelwork-map-stitch-state',
+        source: addImageToArchive(source, `source_${source.file.name}`),
         tiles,
-        tileUploads: Object.fromEntries(uploads.filter((item): item is NonNullable<typeof item> => Boolean(item))),
+        tileUploads: Object.fromEntries(uploads),
         tileFeathers,
         selectedKey,
         horizontalOverlapPercent,
@@ -1093,9 +1129,10 @@ export default function MapStitch({ onBack }: Props) {
         hiddenPreviewTiles,
       }
 
+      zip.file(STATE_MANIFEST_NAME, JSON.stringify(state, null, 2))
       downloadBlob(
-        new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' }),
-        `${safeFilename(getBaseName(source.file))}_map_stitch_state.json`,
+        await zip.generateAsync({ type: 'blob', compression: 'STORE' }),
+        `${safeFilename(getBaseName(source.file))}_map_stitch_state.zip`,
       )
       message.success('拼接状态已保存')
     } catch (error) {
@@ -1103,59 +1140,68 @@ export default function MapStitch({ onBack }: Props) {
     }
   }
 
+  const applyEditState = async (state: SavedMapStitchState, zip?: JSZip) => {
+    if ((state.version !== 1 && state.version !== STATE_ARCHIVE_VERSION) || !state.source) {
+      throw new Error('不是有效的拼接状态文件')
+    }
+
+    const nextSource = await loadImageFile(await savedImageStateToFile(
+      state.source,
+      'map_tile.png',
+      zip,
+    ))
+
+    const uploads = await Promise.all(
+      Object.entries(state.tileUploads ?? {}).map(async ([key, upload]) => {
+        const loaded = await loadImageFile(await savedImageStateToFile(
+          upload,
+          `tile_${key.replace(',', '_')}.png`,
+          zip,
+        ))
+        return [key, loaded] as const
+      }),
+    )
+
+    const nextTiles = normalizeTilesState(state.tiles)
+    const nextTileUploads = Object.fromEntries(uploads) as Partial<Record<TileKey, LoadedImage>>
+    const nextExpandSplit: ExpandSplit = state.expandSplit === 8 || state.expandSplit === 12 ? state.expandSplit : 4
+    const nextPan = isRecord(state.pan)
+      ? { x: numberOr(state.pan.x, 0), y: numberOr(state.pan.y, 0) }
+      : { x: 0, y: 0 }
+
+    setSource((prev) => {
+      if (prev) URL.revokeObjectURL(prev.url)
+      return nextSource
+    })
+    setTileUploads((prev) => {
+      Object.values(prev).forEach((item) => item && URL.revokeObjectURL(item.url))
+      return nextTileUploads
+    })
+    setTiles(nextTiles)
+    setTileFeathers(normalizeFeathersState(state.tileFeathers))
+    setSelectedKey(typeof state.selectedKey === 'string' ? state.selectedKey : null)
+    setHorizontalOverlapPercent(Math.max(0, Math.min(50, numberOr(state.horizontalOverlapPercent, 15))))
+    setVerticalOverlapPercent(Math.max(0, Math.min(50, numberOr(state.verticalOverlapPercent, 15))))
+    setExpandSplit(nextExpandSplit)
+    setPan(nextPan)
+    setZoom(clampZoom(numberOr(state.zoom, 1)))
+    setHidePreviewBorders(typeof state.hidePreviewBorders === 'boolean' ? state.hidePreviewBorders : false)
+    setHiddenPreviewTiles(booleanRecord(state.hiddenPreviewTiles))
+    setProcessingKey(null)
+    setPendingUploadKey(null)
+  }
+
   const loadEditStateJson = async (file: File | null) => {
     if (!file) return
     try {
-      const state = JSON.parse(await file.text()) as SavedMapStitchState
-      if (state.version !== 1 || !state.source?.dataUrl) throw new Error('不是有效的拼接状态文件')
-
-      const nextSource = await loadImageFile(dataUrlToFile(
-        state.source.dataUrl,
-        state.source.fileName || 'map_tile.png',
-        state.source.type || 'image/png',
-      ))
-
-      const uploads = await Promise.all(
-        Object.entries(state.tileUploads ?? {}).map(async ([key, upload]) => {
-          if (!upload?.dataUrl) return null
-          const loaded = await loadImageFile(dataUrlToFile(
-            upload.dataUrl,
-            upload.fileName || `tile_${key.replace(',', '_')}.png`,
-            upload.type || 'image/png',
-          ))
-          return [key, loaded] as const
-        }),
-      )
-
-      const nextTiles = normalizeTilesState(state.tiles)
-      const nextTileUploads = Object.fromEntries(
-        uploads.filter((item): item is NonNullable<typeof item> => Boolean(item)),
-      ) as Partial<Record<TileKey, LoadedImage>>
-      const nextExpandSplit: ExpandSplit = state.expandSplit === 8 || state.expandSplit === 12 ? state.expandSplit : 4
-      const nextPan = isRecord(state.pan)
-        ? { x: numberOr(state.pan.x, 0), y: numberOr(state.pan.y, 0) }
-        : { x: 0, y: 0 }
-
-      setSource((prev) => {
-        if (prev) URL.revokeObjectURL(prev.url)
-        return nextSource
-      })
-      setTileUploads((prev) => {
-        Object.values(prev).forEach((item) => item && URL.revokeObjectURL(item.url))
-        return nextTileUploads
-      })
-      setTiles(nextTiles)
-      setTileFeathers(normalizeFeathersState(state.tileFeathers))
-      setSelectedKey(typeof state.selectedKey === 'string' ? state.selectedKey : null)
-      setHorizontalOverlapPercent(Math.max(0, Math.min(50, numberOr(state.horizontalOverlapPercent, 15))))
-      setVerticalOverlapPercent(Math.max(0, Math.min(50, numberOr(state.verticalOverlapPercent, 15))))
-      setExpandSplit(nextExpandSplit)
-      setPan(nextPan)
-      setZoom(clampZoom(numberOr(state.zoom, 1)))
-      setHidePreviewBorders(typeof state.hidePreviewBorders === 'boolean' ? state.hidePreviewBorders : false)
-      setHiddenPreviewTiles(booleanRecord(state.hiddenPreviewTiles))
-      setProcessingKey(null)
-      setPendingUploadKey(null)
+      if (file.name.toLowerCase().endsWith('.zip') || file.type === 'application/zip' || file.type === 'application/x-zip-compressed') {
+        const zip = await JSZip.loadAsync(file)
+        const manifest = zip.file(STATE_MANIFEST_NAME)
+        if (!manifest) throw new Error('拼接状态 ZIP 缺少 map_stitch_state.json')
+        await applyEditState(JSON.parse(await manifest.async('text')) as SavedMapStitchState, zip)
+      } else {
+        await applyEditState(JSON.parse(await file.text()) as SavedMapStitchState)
+      }
       message.success('拼接状态已加载')
     } catch (error) {
       message.error(`加载拼接状态失败：${String(error)}`)
@@ -1331,7 +1377,7 @@ export default function MapStitch({ onBack }: Props) {
       <input
         ref={stateFileInputRef}
         type="file"
-        accept="application/json,.json"
+        accept="application/zip,application/x-zip-compressed,application/json,.zip,.json"
         hidden
         onChange={(event) => {
           void loadEditStateJson(event.target.files?.[0] ?? null)
