@@ -1,0 +1,163 @@
+{
+  "version": 7,
+  "nodes": [
+    {
+      "id": "8e3e7948-02bb-40f9-9afc-aeac3e666cd0",
+      "type": "geminiWatermarkRemove",
+      "params": {},
+      "x": -235.2941176470588,
+      "y": 24.70588235294118
+    },
+    {
+      "id": "70c921c0-6e0e-4558-ae84-4cf4c502a2e8",
+      "type": "resize",
+      "params": {
+        "w": 512,
+        "h": 128,
+        "keepAspect": 1,
+        "pixelated": 1
+      },
+      "x": 84.7058823529411,
+      "y": 23.52941176470587
+    },
+    {
+      "id": "5a57e8fb-4544-4369-9365-c788f9bfc693",
+      "type": "customGridRearrange",
+      "params": {
+        "splitCols": 2,
+        "splitRows": 1,
+        "outRows": 2,
+        "outCols": 1
+      },
+      "rearrangeGrid": [
+        [
+          1
+        ],
+        [
+          2
+        ]
+      ],
+      "x": 756.4705882352941,
+      "y": 50.588235294117624
+    },
+    {
+      "id": "b29e2a3a-2950-4f43-a55b-fef9f366261d",
+      "type": "crop",
+      "params": {
+        "left": 0,
+        "top": 0,
+        "right": 1,
+        "bottom": 0
+      },
+      "x": 756.470588235294,
+      "y": 50.588235294117624
+    },
+    {
+      "id": "500969bc-dea9-4782-a477-01ccbe68ee28",
+      "type": "matteContiguous",
+      "params": {
+        "tolerance": 80,
+        "feather": 5
+      },
+      "x": 1036.4705882352941,
+      "y": 50.588235294117624
+    },
+    {
+      "id": "508fcb7e-a9b5-441b-9a36-d578c7981e94",
+      "type": "customGridRearrange",
+      "params": {
+        "splitCols": 3,
+        "splitRows": 2,
+        "outRows": 1,
+        "outCols": 6
+      },
+      "rearrangeGrid": [
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ]
+      ],
+      "x": 1316.4705882352941,
+      "y": 50.588235294117624
+    },
+    {
+      "id": "094d0358-adfc-48c2-92ee-3ef6c500594b",
+      "type": "evenSplitPerCellEdge",
+      "params": {
+        "evenCols": 6,
+        "evenRows": 1,
+        "cellEdgeMode": 0,
+        "edgeL": 64,
+        "edgeT": 85,
+        "edgeR": 64,
+        "edgeB": 86
+      },
+      "x": 2063.7647058823527,
+      "y": 34.1176470588235
+    },
+    {
+      "id": "a3dfbfd7-7cc9-432f-9dd5-2d7441528b72",
+      "type": "customGridRearrange",
+      "params": {
+        "splitCols": 6,
+        "splitRows": 1,
+        "outRows": 1,
+        "outCols": 6
+      },
+      "rearrangeGrid": [
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ]
+      ],
+      "x": 1315.5294117647059,
+      "y": 49.41176470588233
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-8e3e7948-02bb-40f9-9afc-aeac3e666cd0-70c921c0-6e0e-4558-ae84-4cf4c502a2e8-in-1776423855482",
+      "source": "8e3e7948-02bb-40f9-9afc-aeac3e666cd0",
+      "target": "70c921c0-6e0e-4558-ae84-4cf4c502a2e8"
+    },
+    {
+      "id": "e-70c921c0-6e0e-4558-ae84-4cf4c502a2e8-5a57e8fb-4544-4369-9365-c788f9bfc693-in-1776423865842",
+      "source": "70c921c0-6e0e-4558-ae84-4cf4c502a2e8",
+      "target": "5a57e8fb-4544-4369-9365-c788f9bfc693"
+    },
+    {
+      "id": "e-5a57e8fb-4544-4369-9365-c788f9bfc693-b29e2a3a-2950-4f43-a55b-fef9f366261d-in-1776423902743",
+      "source": "5a57e8fb-4544-4369-9365-c788f9bfc693",
+      "target": "b29e2a3a-2950-4f43-a55b-fef9f366261d"
+    },
+    {
+      "id": "e-b29e2a3a-2950-4f43-a55b-fef9f366261d-500969bc-dea9-4782-a477-01ccbe68ee28-in-1776423913522",
+      "source": "b29e2a3a-2950-4f43-a55b-fef9f366261d",
+      "target": "500969bc-dea9-4782-a477-01ccbe68ee28"
+    },
+    {
+      "id": "e-500969bc-dea9-4782-a477-01ccbe68ee28-508fcb7e-a9b5-441b-9a36-d578c7981e94-in-1776423916482",
+      "source": "500969bc-dea9-4782-a477-01ccbe68ee28",
+      "target": "508fcb7e-a9b5-441b-9a36-d578c7981e94"
+    },
+    {
+      "id": "e-508fcb7e-a9b5-441b-9a36-d578c7981e94-a3dfbfd7-7cc9-432f-9dd5-2d7441528b72-in-1776423974802",
+      "source": "508fcb7e-a9b5-441b-9a36-d578c7981e94",
+      "target": "a3dfbfd7-7cc9-432f-9dd5-2d7441528b72"
+    },
+    {
+      "id": "e-a3dfbfd7-7cc9-432f-9dd5-2d7441528b72-094d0358-adfc-48c2-92ee-3ef6c500594b-in-1776423997602",
+      "source": "a3dfbfd7-7cc9-432f-9dd5-2d7441528b72",
+      "target": "094d0358-adfc-48c2-92ee-3ef6c500594b"
+    }
+  ],
+  "presetName": "444"
+}

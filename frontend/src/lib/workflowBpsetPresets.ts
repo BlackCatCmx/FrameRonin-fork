@@ -16,6 +16,10 @@ function bpsetUrl(filename: string): string {
   return `${base}bpset/${encodeURIComponent(filename)}`
 }
 
+function bpsetiUrl(filename: string): string {
+  return `${base}bpseti/${encodeURIComponent(filename)}`
+}
+
 /** 顺序即 UI 按钮顺序（与 public/bpset 下文件一一对应） */
 export const WORKFLOW_BPSET_PRESETS: WorkflowBpsetPresetMeta[] = [
   {
@@ -77,5 +81,16 @@ export const WORKFLOW_BPSET_PRESETS: WorkflowBpsetPresetMeta[] = [
     id: 'xiaosuJianshi',
     url: bpsetUrl('小苏剑士.json'),
     labelKey: 'roninProWorkflowBpset_xiaosuJianshi',
+  },
+]
+
+/**
+ * 直运行预设：从 `public/bpseti/*.json` 加载，执行流水线但不写入蓝图画布
+ */
+export const WORKFLOW_BPSETI_DIRECT_PRESETS: WorkflowBpsetPresetMeta[] = [
+  {
+    id: 'direct-128tudou',
+    url: bpsetiUrl('128土豆.json'),
+    labelKey: 'roninProWorkflowBpseti_128tudou',
   },
 ]

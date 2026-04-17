@@ -33,7 +33,7 @@ import {
   type WorkflowEdge,
   type WorkflowNodeType,
 } from '../lib/roninProWorkflow'
-import { WORKFLOW_BPSET_PRESETS } from '../lib/workflowBpsetPresets'
+import { WORKFLOW_BPSET_PRESETS, WORKFLOW_BPSETI_DIRECT_PRESETS } from '../lib/workflowBpsetPresets'
 import StashDropZone from './StashDropZone'
 import WorkflowBlueprintCanvas, {
   BLUEPRINT_INPUT_IMAGE_NODE_WIDTH,
@@ -147,6 +147,7 @@ export default function RoninProCustomWorkflow({ onSendToFineProcess }: RoninPro
   /** 导出预设名：写入 JSON 的 presetName，并用于下载文件名 */
   const [presetName, setPresetName] = useState('')
   const [finishedPresetsOpen, setFinishedPresetsOpen] = useState(false)
+  const [directRunPresetsOpen, setDirectRunPresetsOpen] = useState(false)
   const [bpsetLoadingId, setBpsetLoadingId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -327,91 +328,113 @@ export default function RoninProCustomWorkflow({ onSendToFineProcess }: RoninPro
     [addInputImageAt, addNodeAt, t]
   )
 
-  const handleRunAll = async () => {
-    if (graphNodes.length === 0) {
-      message.warning(t('roninProWorkflowNoNodes'))
-      return
-    }
-    if (fileItems.length === 0) {
-      message.warning(t('roninProWorkflowNoFiles'))
-      return
-    }
-    const strategyResult = computeWorkflowRunStrategy(graphNodes, graphEdges, fileItems.length)
-    if (!strategyResult.ok) {
-      message.warning(t(`roninProWorkflowGraphErr_${strategyResult.reason}`))
-      return
-    }
-    setRunning(true)
-    setResults((prev) => {
-      prev.forEach((r) => URL.revokeObjectURL(r.url))
-      return []
-    })
-    const out: { name: string; url: string }[] = []
-    try {
-      const { strategy } = strategyResult
-      if (strategy.kind === 'all') {
-        for (const { file } of fileItems) {
-          const blob = await runWorkflowOnBlob(file, strategy.order)
-          const url = URL.createObjectURL(blob)
-          const base = file.name.replace(/\.[^.]+$/, '')
-          out.push({ name: `${base}_workflow.png`, url })
-        }
-      } else if (strategy.kind === 'targeted') {
-        for (const plan of strategy.plans) {
-          const item = fileItems[plan.fileIndex0]
-          if (!item) continue
-          const blob = await runWorkflowOnBlob(item.file, plan.steps)
-          const url = URL.createObjectURL(blob)
-          const base = item.file.name.replace(/\.[^.]+$/, '')
-          out.push({ name: `${base}_workflow.png`, url })
-        }
-      } else if (strategy.kind === 'dag_per_file') {
-        for (const { file } of fileItems) {
+  const executeParsedWorkflow = useCallback(
+    async (nodes: GraphNode[], edges: WorkflowEdge[]) => {
+      if (nodes.length === 0) {
+        message.warning(t('roninProWorkflowNoNodes'))
+        return
+      }
+      if (fileItems.length === 0) {
+        message.warning(t('roninProWorkflowNoFiles'))
+        return
+      }
+      const strategyResult = computeWorkflowRunStrategy(nodes, edges, fileItems.length)
+      if (!strategyResult.ok) {
+        message.warning(t(`roninProWorkflowGraphErr_${strategyResult.reason}`))
+        return
+      }
+      setRunning(true)
+      setResults((prev) => {
+        prev.forEach((r) => URL.revokeObjectURL(r.url))
+        return []
+      })
+      const out: { name: string; url: string }[] = []
+      try {
+        const { strategy } = strategyResult
+        if (strategy.kind === 'all') {
+          for (const { file } of fileItems) {
+            const blob = await runWorkflowOnBlob(file, strategy.order)
+            const url = URL.createObjectURL(blob)
+            const base = file.name.replace(/\.[^.]+$/, '')
+            out.push({ name: `${base}_workflow.png`, url })
+          }
+        } else if (strategy.kind === 'targeted') {
+          for (const plan of strategy.plans) {
+            const item = fileItems[plan.fileIndex0]
+            if (!item) continue
+            const blob = await runWorkflowOnBlob(item.file, plan.steps)
+            const url = URL.createObjectURL(blob)
+            const base = item.file.name.replace(/\.[^.]+$/, '')
+            out.push({ name: `${base}_workflow.png`, url })
+          }
+        } else if (strategy.kind === 'dag_per_file') {
+          for (const { file } of fileItems) {
+            const blob = await runDagExecution(
+              strategy.topo,
+              strategy.edges,
+              strategy.sinkId,
+              () => file
+            )
+            const url = URL.createObjectURL(blob)
+            const base = file.name.replace(/\.[^.]+$/, '')
+            out.push({ name: `${base}_workflow.png`, url })
+          }
+        } else if (strategy.kind === 'dag_once') {
           const blob = await runDagExecution(
             strategy.topo,
             strategy.edges,
             strategy.sinkId,
-            () => file
+            (h) => {
+              const maxIdx = Math.max(1, fileItems.length)
+              const idx1 = Math.min(
+                Math.max(1, Math.round(h.params.imageIndex ?? 1)),
+                maxIdx
+              )
+              return fileItems[idx1 - 1]!.file
+            }
           )
           const url = URL.createObjectURL(blob)
-          const base = file.name.replace(/\.[^.]+$/, '')
-          out.push({ name: `${base}_workflow.png`, url })
+          const heads = strategy.topo.filter((n) => !strategy.edges.some((e) => e.target === n.id))
+          const firstIn = heads.find((n) => n.type === 'workflowInputImage')
+          const maxIdx = Math.max(1, fileItems.length)
+          const idx1 = firstIn
+            ? Math.min(Math.max(1, Math.round(firstIn.params.imageIndex ?? 1)), maxIdx)
+            : 1
+          const refFile = fileItems[idx1 - 1]?.file ?? fileItems[0]!.file
+          const base = refFile.name.replace(/\.[^.]+$/, '')
+          const dagSuffix = strategy.topo.some((x) => x.type === 'matteDoubleBackground')
+            ? '_workflow_doublebg.png'
+            : '_workflow.png'
+          out.push({ name: `${base}${dagSuffix}`, url })
         }
-      } else if (strategy.kind === 'dag_once') {
-        const blob = await runDagExecution(
-          strategy.topo,
-          strategy.edges,
-          strategy.sinkId,
-          (h) => {
-            const maxIdx = Math.max(1, fileItems.length)
-            const idx1 = Math.min(
-              Math.max(1, Math.round(h.params.imageIndex ?? 1)),
-              maxIdx
-            )
-            return fileItems[idx1 - 1]!.file
-          }
-        )
-        const url = URL.createObjectURL(blob)
-        const heads = strategy.topo.filter((n) => !strategy.edges.some((e) => e.target === n.id))
-        const firstIn = heads.find((n) => n.type === 'workflowInputImage')
-        const maxIdx = Math.max(1, fileItems.length)
-        const idx1 = firstIn
-          ? Math.min(Math.max(1, Math.round(firstIn.params.imageIndex ?? 1)), maxIdx)
-          : 1
-        const refFile = fileItems[idx1 - 1]?.file ?? fileItems[0]!.file
-        const base = refFile.name.replace(/\.[^.]+$/, '')
-        const dagSuffix = strategy.topo.some((x) => x.type === 'matteDoubleBackground')
-          ? '_workflow_doublebg.png'
-          : '_workflow.png'
-        out.push({ name: `${base}${dagSuffix}`, url })
+        setResults(out)
+        message.success(t('roninProWorkflowDone'))
+      } catch (e) {
+        console.error(e)
+        message.error(t('roninProWorkflowFailed'))
+      } finally {
+        setRunning(false)
       }
-      setResults(out)
-      message.success(t('roninProWorkflowDone'))
-    } catch (e) {
-      console.error(e)
-      message.error(t('roninProWorkflowFailed'))
+    },
+    [fileItems, t]
+  )
+
+  const handleRunAll = () => {
+    void executeParsedWorkflow(graphNodes, graphEdges)
+  }
+
+  const loadAndRunBpsetiDirect = async (presetId: string, url: string) => {
+    setBpsetLoadingId(presetId)
+    try {
+      const res = await fetch(url)
+      if (!res.ok) throw new Error(String(res.status))
+      const json = await res.text()
+      const { nodes, edges } = parseWorkflowGraph(json)
+      await executeParsedWorkflow(nodes, edges)
+    } catch {
+      message.error(t('roninProWorkflowBpsetLoadFailed'))
     } finally {
-      setRunning(false)
+      setBpsetLoadingId(null)
     }
   }
 
@@ -1304,6 +1327,12 @@ export default function RoninProCustomWorkflow({ onSendToFineProcess }: RoninPro
           >
             {t('roninProWorkflowLoadFinishedPresets')}
           </Button>
+          <Button
+            type={directRunPresetsOpen ? 'primary' : 'default'}
+            onClick={() => setDirectRunPresetsOpen((o) => !o)}
+          >
+            {t('roninProWorkflowLoadDirectRunPresets')}
+          </Button>
         </Space>
         {finishedPresetsOpen && (
           <Space wrap style={{ marginTop: 8 }}>
@@ -1312,6 +1341,19 @@ export default function RoninProCustomWorkflow({ onSendToFineProcess }: RoninPro
                 key={p.id}
                 loading={bpsetLoadingId === p.id}
                 onClick={() => void loadBpsetPreset(p.id, p.url)}
+              >
+                {t(p.labelKey)}
+              </Button>
+            ))}
+          </Space>
+        )}
+        {directRunPresetsOpen && (
+          <Space wrap style={{ marginTop: 8 }}>
+            {WORKFLOW_BPSETI_DIRECT_PRESETS.map((p) => (
+              <Button
+                key={p.id}
+                loading={bpsetLoadingId === p.id}
+                onClick={() => void loadAndRunBpsetiDirect(p.id, p.url)}
               >
                 {t(p.labelKey)}
               </Button>
